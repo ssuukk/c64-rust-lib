@@ -1,56 +1,54 @@
-//use std::ops::{Index, IndexMut};
-use core::ops::{ Index, IndexMut };
+use core::ops::{Index, IndexMut};
 use core::mem;
 use core::cell::UnsafeCell;
 use crate::reu;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
-/// A struct representing a custom slice that acts as a window over a larger dataset.
 pub struct CustomSlice<'a, T> {
-    cache: &'a mut [T],      // Mutable reference to the local cache
-    remote_data_size: u32,   // Total number of elements in the remote data
-    cache_start_index: u32,  // The starting index of the current window in the remote data
-    iter_index: u32,
+    cache: UnsafeCell<&'a mut [T]>,  // Mutable reference to the local cache wrapped in UnsafeCell
+    element_count: u32,            // Total number of elements in the remote data
+    window_start_index: UnsafeCell<u32>,  // The starting index of the current window in the remote data
+    iter_index: UnsafeCell<u32>,      // UnsafeCell to allow interior mutability
+    window_size: u32,
+    dirty: bool,
 }
 
 impl<'a, T> CustomSlice<'a, T> {
-    /// Creates a new `CustomSlice`.
-    pub fn new(
-        cache: &'a mut [T],
-        remote_data_size: u32,
-    ) -> Self {
+    pub fn new(cache: &'a mut [T], element_count: u32, windows_szie: u32) -> Self {
         CustomSlice {
-            cache,
-            remote_data_size,
-            cache_start_index: 0, // start with the beginning of the remote data
-            iter_index: 0,
+            cache: UnsafeCell::new(cache),
+            element_count,
+            window_start_index: UnsafeCell::new(0), // start with the beginning of the remote data
+            iter_index: UnsafeCell::new(0),
+            window_size: windows_szie,
+            dirty: false,
         }
     }
 
-    /// Ensure that the element at `index` is within the cached window.
-    fn ensure_in_cache(&mut self, index: u32) {
-        println!("Ensuring cache for index {}", index);
-        let cache_size = self.cache.len() as u32;
+    fn ensure_in_cache(&self, index: u32) {
+        let window_start_index = unsafe { *self.window_start_index.get() };
 
-        if index < self.cache_start_index || index >= self.cache_start_index + cache_size {
-            let swap_start = index;
-            let swap_end = swap_start + cache_size.min(self.remote_data_size - swap_start);
+        if index < window_start_index || index >= window_start_index + self.window_size {
+            unsafe {                
+                self.prepare(*self.window_start_index.get());
+                if self.dirty { 
+                    reu::reu().swap_out(); 
+                    //self.dirty = true;
+                }
+                println!("Cache missed for index {}", index);
+                self.prepare(index);
+                reu::reu().swap_in();
 
-            let byte_count = ((swap_end - swap_start) as usize) * mem::size_of::<T>();
-            self.swap_in(swap_start, byte_count);
-
-            self.cache_start_index = swap_start;
+                *self.window_start_index.get() = index;
+            }
         }
     }
 
-    fn swap_in(&mut self, remote_index: u32, byte_count: usize) {
-        reu::reu().prepare((self.cache.as_mut_ptr() as usize) as u16, remote_index, byte_count as u16);
-        reu::reu().swap_in();
-    }
-
-    fn swap_out(&mut self, remote_index: u32, byte_count: usize) {
-        reu::reu().prepare((self.cache.as_mut_ptr() as usize) as u16, remote_index, byte_count as u16);
-        reu::reu().swap_out();
+    fn prepare(&self, remote_index: u32) {
+        let element_size = mem::size_of::<T>() as u32;
+        let byte_count = element_size * self.window_size;
+        let cache_ptr = unsafe { (*self.cache.get()).as_mut_ptr() };
+        reu::reu().prepare(cache_ptr as u16, remote_index * element_size as u32, byte_count as u16);
     }
 }
 
@@ -58,50 +56,49 @@ impl<'a, T> Index<u32> for CustomSlice<'a, T> {
     type Output = T;
 
     fn index(&self, index: u32) -> &Self::Output {
-        println!("index for index {} < {}", index, self.remote_data_size);
         assert!(
-            index < self.remote_data_size,
+            index < self.element_count,
             "Index out of bounds: index = {}, size = {}",
             index,
-            self.remote_data_size
+            self.element_count
         );
 
         self.ensure_in_cache(index);
 
-        let cache_index = index - unsafe { *self.cache_start_index.get() };
+        let cache_index = index - unsafe { *self.window_start_index.get() };
         unsafe { &(*self.cache.get())[cache_index as usize] }
     }
 }
 
 impl<'a, T> IndexMut<u32> for CustomSlice<'a, T> {
     fn index_mut(&mut self, index: u32) -> &mut Self::Output {
-        println!("index_mut for index {}", index);
         assert!(
-            index < self.remote_data_size,
+            index < self.element_count,
             "Index out of bounds: index = {}, size = {}",
             index,
-            self.remote_data_size
+            self.element_count
         );
 
+        //dirty = true;
         self.ensure_in_cache(index);
 
-        let cache_index = index - self.cache_start_index;
-        &mut self.cache[cache_index as usize]
+        let cache_index = index - unsafe { *self.window_start_index.get() };
+        unsafe { &mut (*self.cache.get())[cache_index as usize] }
     }
 }
 
-impl<'a, T> Iterator for CustomSlice<'a, T> {
-    type Item = T;
+// impl<'a, T> Iterator for CustomSlice<'a, T> {
+//     type Item = &'a T;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        // Increment our count. This is why we started at zero.
-        self.iter_index += 1;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         let iter_index = unsafe { &mut *self.iter_index.get() };
 
-        // Check to see if we've finished counting or not.
-        if self.iter_index < self.remote_data_size {
-            Some(self[self.iter_index])
-        } else {
-            None
-        }
-    }
-}
+//         if *iter_index < self.element_count {
+//             let item = &self[*iter_index];
+//             *iter_index += 1;
+//             Some(item)
+//         } else {
+//             None
+//         }
+//     }
+// }

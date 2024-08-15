@@ -120,19 +120,20 @@ fn wait_for_return() {
 fn test_reu_slice() {
     // Allocate a cache that can hold 10 elements at a time
     let mut local_cache: [u32; 10] = [0; 10];
-    let mut custom_slice = custom_slice::CustomSlice::new(&mut local_cache, 80000);
+    let mut custom_slice = custom_slice::CustomSlice::new(&mut local_cache, 80000, 10);
 
     // Accessing elements (this will trigger the swap_in function as needed)
+    println!("Setting Element 1 = 69");
     custom_slice[1]=69;
+    println!("Setting Element 8 = 666");
     custom_slice[8]=666;
 
-    println!("Element at index 5: {}", custom_slice[1]);
+    println!("Getting at index 1: {}", custom_slice[1]);
 
-    // Modifying elements
+    println!("Setting Element 70000 = 999");
     custom_slice[70000] = 999;
-    println!("Modified element at index 70000: {}", custom_slice[70000]);
-    println!("Trying element 8...");
-    println!("Element at index 8: {}", custom_slice[8]);
+    println!("Getting at index 8: {}", custom_slice[8]);
+    println!("Getting at index 70000: {}", custom_slice[70000]);
 }
 
 pub const HIRES: *const C64HiresScreen = (0xa000) as _;
