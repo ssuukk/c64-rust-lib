@@ -4,7 +4,7 @@ use core::cell::UnsafeCell;
 use crate::reu;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
-pub struct CustomSlice<'a, T> {
+pub struct REUArray<'a, T> {
     cache: UnsafeCell<&'a mut [T]>,  // Mutable reference to the local cache wrapped in UnsafeCell
     element_count: u32,            // Total number of elements in the remote data
     window_start_index: UnsafeCell<u32>,  // The starting index of the current window in the remote data
@@ -13,9 +13,9 @@ pub struct CustomSlice<'a, T> {
     dirty: bool,
 }
 
-impl<'a, T> CustomSlice<'a, T> {
+impl<'a, T> REUArray<'a, T> {
     pub fn new(cache: &'a mut [T], element_count: u32, windows_szie: u32) -> Self {
-        CustomSlice {
+        REUArray {
             cache: UnsafeCell::new(cache),
             element_count,
             window_start_index: UnsafeCell::new(0), // start with the beginning of the remote data
@@ -52,7 +52,7 @@ impl<'a, T> CustomSlice<'a, T> {
     }
 }
 
-impl<'a, T> Index<u32> for CustomSlice<'a, T> {
+impl<'a, T> Index<u32> for REUArray<'a, T> {
     type Output = T;
 
     fn index(&self, index: u32) -> &Self::Output {
@@ -70,7 +70,7 @@ impl<'a, T> Index<u32> for CustomSlice<'a, T> {
     }
 }
 
-impl<'a, T> IndexMut<u32> for CustomSlice<'a, T> {
+impl<'a, T> IndexMut<u32> for REUArray<'a, T> {
     fn index_mut(&mut self, index: u32) -> &mut Self::Output {
         assert!(
             index < self.element_count,
@@ -87,7 +87,7 @@ impl<'a, T> IndexMut<u32> for CustomSlice<'a, T> {
     }
 }
 
-// impl<'a, T> Iterator for CustomSlice<'a, T> {
+// impl<'a, T> Iterator for REUArray<'a, T> {
 //     type Item = &'a T;
 
 //     fn next(&mut self) -> Option<Self::Item> {

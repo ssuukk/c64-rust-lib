@@ -16,7 +16,7 @@ extern crate mos_alloc;
 
 use core::panic::PanicInfo; // struktura zawierająca info o panic
 use core::slice;
-use reu::custom_slice;
+use reu::array;
 use reu::wallocator::{ WAllocator, Ptr24 };
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 use mos_hardware::{c64, vic2, poke, cbm_kernal};
@@ -104,20 +104,20 @@ fn wait_for_return() {
 fn test_reu_slice() {
     // Allocate a cache that can hold 10 elements at a time
     let mut local_cache: [u32; 10] = [0; 10];
-    let mut custom_slice = custom_slice::CustomSlice::new(&mut local_cache, 80000, 10);
+    let mut array = array::REUArray::new(&mut local_cache, 80000, 10);
 
     // Accessing elements (this will trigger the swap_in function as needed)
     println!("Setting Element 1 = 69");
-    custom_slice[1]=69;
+    array[1]=69;
     println!("Setting Element 8 = 666");
-    custom_slice[8]=666;
+    array[8]=666;
 
-    println!("Getting at index 1: {}", custom_slice[1]);
+    println!("Getting at index 1: {}", array[1]);
 
     println!("Setting Element 70000 = 999");
-    custom_slice[70000] = 999;
-    println!("Getting at index 8: {}", custom_slice[8]);
-    println!("Getting at index 70000: {}", custom_slice[70000]);
+    array[70000] = 999;
+    println!("Getting at index 8: {}", array[8]);
+    println!("Getting at index 70000: {}", array[70000]);
 }
 
 pub const HIRES: *const C64HiresScreen = (0xa000) as _;
