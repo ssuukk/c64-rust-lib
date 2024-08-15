@@ -3,8 +3,8 @@
 // opcjonalnie dodać --release
 // 
 // kopiowanie wyniku:
-// docker cp vigilant_beaver:/workspaces/rust-mos-hello-world-main/target/mos-c64-none/release/rust-mos-hello-world D:/temp/rust
-
+// docker cp determined_williamson:/workspaces/c64-rust-lib/target/mos-c64-none/release/rust-mos-hello-world D:/temp/rust
+// otwarcie terminala kontenera: ctrl+shift+`
 // https://github.com/mlund/mos-hardware
 
 #![no_std] // nie ładuj biblioteki std
@@ -16,19 +16,21 @@ extern crate mos_alloc;
 
 use core::panic::PanicInfo; // struktura zawierająca info o panic
 use core::slice;
+use reu::custom_slice;
 use reu::wallocator::{ WAllocator, Ptr24 };
 use reu::reubox::ReuBox;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 use mos_hardware::{c64, vic2, poke, cbm_kernal};
-use vic2::*;
-use plotek::{ EightBitCanvas, Drawable };
+use mos_hardware::vic2::ScreenBank; // albo crate::vic2:ScreenBank
+use plotek::{ C64TextScreen, PixelMatrix, C64HiresScreen, CharMatrix };
+use cia2::VicBankSelect;
 
+
+// jeśli tu nie będzie tych modów, to te pliki nie będą widoczne w całym kodzie!
 mod reu;
 mod ultimate_64;
 mod plotek;
-
-pub const HIRES_SCREEN: *const EightBitCanvas = (0x2000) as _;
-pub const SCREEN: &EightBitCanvas = unsafe { &*HIRES_SCREEN };
+mod cia2;
 
 #[panic_handler] // wymagany w programach bez std
 fn panic(info: &PanicInfo) -> ! {
@@ -67,27 +69,6 @@ macro_rules! volatile_mem_array {
 pub fn turbo() {
     ultimate_64::get().set_speed(ultimate_64::Timings::MHZ_48.bits());
     ultimate_64::get().set_enable(ultimate_64::Turbo::ENABLE.bits());
-}
-
-pub fn text_mode(prev: u8) {
-    unsafe {
-        let mut mask = c64::vic2().control_y.read();
-        mask.set(ControlYFlags::BITMAP_MODE, false);
-        c64::vic2().control_y.write(mask);
-        c64::vic2().screen_and_charset_bank.write(prev);
-    }
-}
-
-pub fn fill_hires_screen_reu(value: u8) {
-    reu::reu().fill(0x2000, 40*8*4, value);
-}
-
-pub fn fill_text_screen(value: u8) {
-    mem_array!(chars, 1024, 1000);
-
-    for byte in chars.iter_mut() {
-        *byte = value;
-    }
 }
 
 fn change_border() {
@@ -136,24 +117,53 @@ fn wait_for_return() {
     }
 }
 
+fn test_reu_slice() {
+    // Allocate a cache that can hold 10 elements at a time
+    let mut local_cache: [u32; 10] = [0; 10];
+    let mut custom_slice = custom_slice::CustomSlice::new(&mut local_cache, 80000);
+
+    // Accessing elements (this will trigger the swap_in function as needed)
+    custom_slice[1]=69;
+    custom_slice[8]=666;
+
+    println!("Element at index 5: {}", custom_slice[1]);
+
+    // Modifying elements
+    custom_slice[70000] = 999;
+    println!("Modified element at index 70000: {}", custom_slice[70000]);
+    println!("Trying element 8...");
+    println!("Element at index 8: {}", custom_slice[8]);
+}
+
+pub const HIRES: *const C64HiresScreen = (0xa000) as _;
+//pub const SCREEN: &C64HiresScreen = unsafe { &*HIRES_SCREEN };
+pub const COLORS: *const C64TextScreen = (0x8400) as _;
+
+fn test_hires() {
+    unsafe {
+        (*HIRES).clear(0);
+        (*COLORS).clear(33);
+        //reu::reu().fill(0xa000, 8000, 0);
+        plotek::show(VicBankSelect::VIC_8000, ScreenBank::AT_0400);
+
+        for i in 0..32 {
+            (*HIRES).line((0,0),(i*10,199));
+        }
+    
+        wait_for_return();
+
+        plotek::hide();
+    }
+}
+
 #[start] // atrybut oznaczający entrypoint
 fn _main(_argc: isize, _argv: *const *const u8) -> isize {
 
     //change_border();
 
-    unsafe {
-        SCREEN.show(true);
-        SCREEN.clear(1);
-        for i in 0..31 {
-            SCREEN.line((0,0),(i*10,199));
-        }
-    
-        //fill_hires_screen_reu(128+4);
+    //test_hires();
+    test_reu_slice();
 
-        wait_for_return();
-
-        SCREEN.show(false);
-    }
     //box_test();
     0
 }
