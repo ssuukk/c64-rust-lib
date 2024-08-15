@@ -16,14 +16,14 @@ extern crate mos_alloc;
 
 use core::panic::PanicInfo; // struktura zawierająca info o panic
 use core::slice;
-use reu::array;
+use core::alloc::GlobalAlloc;
 use reu::wallocator::{ WAllocator, Ptr24 };
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 use mos_hardware::{c64, vic2, poke, cbm_kernal};
 use mos_hardware::vic2::ScreenBank; // albo crate::vic2:ScreenBank
 use plotek::{ C64TextScreen, PixelMatrix, C64HiresScreen, CharMatrix };
 use cia2::VicBankSelect;
-
+use crate::reu::custom_slice::REUArray;
 
 // jeśli tu nie będzie tych modów, to te pliki nie będą widoczne w całym kodzie!
 mod reu;
@@ -104,7 +104,7 @@ fn wait_for_return() {
 fn test_reu_slice() {
     // Allocate a cache that can hold 10 elements at a time
     let mut local_cache: [u32; 10] = [0; 10];
-    let mut array = array::REUArray::new(&mut local_cache, 80000, 10);
+    let mut array = REUArray::new(&mut local_cache, 80000, 10);
 
     // Accessing elements (this will trigger the swap_in function as needed)
     println!("Setting Element 1 = 69");

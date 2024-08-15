@@ -4,6 +4,16 @@ use core::cell::UnsafeCell;
 use crate::reu;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
+
+extern "C" {
+    fn malloc(n: usize) -> *mut u8;
+    fn free(ptr: *mut u8);
+    fn __heap_bytes_free() -> usize;
+    fn __heap_bytes_used() -> usize;
+    fn __set_heap_limit(limit: usize);
+    fn __heap_limit() -> usize;
+}
+
 pub struct REUArray<'a, T> {
     cache: UnsafeCell<&'a mut [T]>,  // Mutable reference to the local cache wrapped in UnsafeCell
     element_count: u32,            // Total number of elements in the remote data
@@ -35,7 +45,7 @@ impl<'a, T> REUArray<'a, T> {
                     reu::reu().swap_out(); 
                     //self.dirty = true;
                 }
-                println!("Cache missed for index {}", index);
+                //println!("Cache missed for index {}", index);
                 self.prepare(index);
                 reu::reu().swap_in();
 
