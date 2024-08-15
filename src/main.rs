@@ -18,7 +18,6 @@ use core::panic::PanicInfo; // struktura zawierająca info o panic
 use core::slice;
 use reu::custom_slice;
 use reu::wallocator::{ WAllocator, Ptr24 };
-use reu::reubox::ReuBox;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 use mos_hardware::{c64, vic2, poke, cbm_kernal};
 use mos_hardware::vic2::ScreenBank; // albo crate::vic2:ScreenBank
@@ -94,21 +93,6 @@ fn alloc_test() {
 
         reu::reu().dealloc(ptr);
     }
-}
-
-fn box_test() {
-    let mut my_box = ReuBox::new(42, 40000);
-
-    my_box.put(1,44);
-
-    my_box.put(1, 666);
-    my_box.put(3999, 124231432);
-    my_box.put(40000, 69);
-
-    println!("My box array stored at: {}",my_box.ptr24.address);
-    println!("at index 1 = {}", my_box[1]);
-    println!("at index 3999 {}", my_box[3999]);
-    println!("at index 40000 {}", my_box[40000]);
 }
 
 fn wait_for_return() {

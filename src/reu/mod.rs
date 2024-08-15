@@ -6,7 +6,6 @@ use core::mem::size_of;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
 pub mod wallocator;
-pub mod reubox;
 pub mod custom_slice;
 
 pub const REU: *const RamExpanstionUnit = (0xDF00) as _;

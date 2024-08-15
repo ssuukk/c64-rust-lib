@@ -94,6 +94,9 @@ impl<'a, T> IndexMut<u32> for CustomSlice<'a, T> {
 //         let iter_index = unsafe { &mut *self.iter_index.get() };
 
 //         if *iter_index < self.element_count {
+//             self.ensure_in_cache(*iter_index);
+
+//             // Return the reference directly within Some, avoiding the intermediate variable.
 //             let item = &self[*iter_index];
 //             *iter_index += 1;
 //             Some(item)
