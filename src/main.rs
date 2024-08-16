@@ -103,7 +103,7 @@ fn wait_for_return() {
 
 fn test_reu_slice() {
     // Allocate 80000 u32 elements plus a cache that can hold 10 elements at a time
-    let mut array = REUArray::<u32>::new(80000, 10);
+    let mut array = REUArray::<u32>::new(100000, 10);
 
     println!("Setting Element 1 = 69");
     array[1]=69;
@@ -116,6 +116,11 @@ fn test_reu_slice() {
     array[70000] = 999;
     println!("Getting at index 8: {}", array[8]);
     println!("Getting at index 70000: {}", array[70000]);
+
+    // for x in array.into_iter() {
+    //     println!("Element: {}", x);
+    // }
+
 }
 
 pub const HIRES: *const C64HiresScreen = (0xa000) as _;

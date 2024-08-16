@@ -107,16 +107,19 @@ impl<T> IndexMut<u32> for REUArray<T> {
     }
 }
 
-impl<'a, T> Iterator for REUArray<T> {
-    type Item = &'a T;
+impl<T> Iterator for REUArray<T> 
+where
+    T: Clone, // Ensure T can be cloned
+{
+    type Item = T; // Return owned values instead of references
 
-    fn next(&'a mut self) -> Option<Self::Item> {
+    fn next(&mut self) -> Option<Self::Item> {
         let iter_index = unsafe { &mut *self.iter_index.get() };
 
         if *iter_index < self.element_count {
             self.ensure_in_cache(*iter_index);
 
-            let item = &self[*iter_index];
+            let item = self[*iter_index].clone(); // Clone the item
             *iter_index += 1;
             Some(item)
         } else {
