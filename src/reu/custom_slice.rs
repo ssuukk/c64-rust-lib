@@ -2,8 +2,6 @@ use core::ops::{Index, IndexMut};
 use core::mem;
 use core::cell::UnsafeCell;
 use crate::reu;
-use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
-
 
 extern "C" {
     fn malloc(n: usize) -> *mut u8;
@@ -53,7 +51,6 @@ impl<T> REUArray<T> {
                     reu::reu().swap_out(); 
                     *self.dirty.get() = false;
                 }
-                //println!("Cache missed for index {}", index);
                 self.prepare(index);
                 reu::reu().swap_in();
 
@@ -74,6 +71,7 @@ impl<T> Index<u32> for REUArray<T> {
     type Output = T;
 
     fn index(&self, index: u32) -> &Self::Output {
+        #[cfg(debug_assertions)]
         assert!(
             index < self.element_count,
             "Index out of bounds: index = {}, size = {}",
@@ -90,6 +88,7 @@ impl<T> Index<u32> for REUArray<T> {
 
 impl<T> IndexMut<u32> for REUArray<T> {
     fn index_mut(&mut self, index: u32) -> &mut Self::Output {
+        #[cfg(debug_assertions)]
         assert!(
             index < self.element_count,
             "Index out of bounds: index = {}, size = {}",
@@ -127,8 +126,6 @@ where
         }
     }
 }
-
-
 
 impl<'a, T> Drop for REUArray<T> {
     fn drop(&mut self) {
