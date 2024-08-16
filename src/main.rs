@@ -31,6 +31,7 @@ mod ultimate_64;
 mod plotek;
 mod cia2;
 
+
 #[panic_handler] // wymagany w programach bez std
 fn panic(info: &PanicInfo) -> ! {
     // Check if there's a payload (message) in the panic info
@@ -101,26 +102,38 @@ fn wait_for_return() {
     }
 }
 
+
+#[derive(Clone)]
+struct GameUnit {
+    speed: u8,
+    health: u8,
+    x: u16,
+    y: u16,
+}
+
 fn test_reu_slice() {
-    // Allocate 80000 u32 elements plus a cache that can hold 10 elements at a time
-    let mut array = REUArray::<u32>::new(100000, 10);
+    // Allocate 100,000 GameUnit elements plus a cache that can hold 10 elements at a time
+    let mut array = REUArray::<GameUnit>::new(20, 10);
 
-    println!("Setting Element 1 = 69");
-    array[1]=69;
-    println!("Setting Element 8 = 666");
-    array[8]=666;
+    println!("Setting Unit 1");
+    array[1]=GameUnit { speed: 1, health: 2, x: 3, y: 4 };
+    println!("Setting Unit 8");
+    array[8]=GameUnit { speed: 3, health: 20, x: 10, y: 20 };
 
-    println!("Getting at index 1: {}", array[1]);
+    println!("Getting health at index 1: {}", array[1].health);
 
-    println!("Setting Element 70000 = 999");
-    array[70000] = 999;
-    println!("Getting at index 8: {}", array[8]);
-    println!("Getting at index 70000: {}", array[70000]);
+    println!("Setting x of Element 17 to 100");
+    array[17].x = 100;
+    println!("Getting speed at index 8: {}", array[8].speed);
+    println!("Getting x at index 70000: {}", array[16].x);
 
-    // for x in array.into_iter() {
-    //     println!("Element: {}", x);
-    // }
+    // find all ead units
+    let dead_units = array.into_iter().filter(|unit| unit.health == 0);
 
+    // print coords of dead units
+    for u in dead_units {
+        println!("Died at: ({},{})", u.x, u.y);
+    }
 }
 
 pub const HIRES: *const C64HiresScreen = (0xa000) as _;
