@@ -30,10 +30,17 @@ fn test_hires() {
 - REUArray (up to 16mb array transparently swapped into C64 memory as needed)
 
 ```
-    let mut local_cache: [u32; 10] = [0; 10];
-    let mut array = REUArray::new(&mut local_cache, 80000, 10);
+    // Allocate 80000 u32 elements plus a cache that can hold 10 elements at a time
+    let mut array = REUArray::<u32>::new(80000, 10);
+
+    println!("Setting Element 1 = 69");
     array[1]=69;
+    println!("Setting Element 8 = 666");
     array[8]=666;
+
+    println!("Getting at index 1: {}", array[1]);
+
+    println!("Setting Element 70000 = 999");
     array[70000] = 999;
     println!("Getting at index 8: {}", array[8]);
     println!("Getting at index 70000: {}", array[70000]);
