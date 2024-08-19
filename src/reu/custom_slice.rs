@@ -2,6 +2,8 @@ use core::ops::{Index, IndexMut};
 use core::mem;
 use core::cell::UnsafeCell;
 use crate::reu;
+use reu::wallocator::{ WAllocator, Ptr24 };
+use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
 extern "C" {
     fn malloc(n: usize) -> *mut u8;
@@ -19,25 +21,37 @@ pub struct REUArray<T> {
     iter_index: UnsafeCell<u32>,      // UnsafeCell to allow interior mutability
     window_size: u32,
     dirty: UnsafeCell<bool>, // Changed from bool to UnsafeCell<bool>
+    reu_address: Ptr24,
+    element_size: usize,
 }
 
 impl<T> REUArray<T> {
     pub fn new(element_count: u32, window_size: u32) -> Self {
         // Allocate memory for the cache on the heap
-        let cache_size = window_size as usize * mem::size_of::<T>();
+        let element_size = mem::size_of::<T>();
+        let cache_size = window_size as usize * element_size; 
         let cache_ptr = unsafe { malloc(cache_size) as *mut T };
 
         if cache_ptr.is_null() {
-            panic!("Failed to allocate memory for REUArray cache");
+            panic!();
         }
 
-        REUArray {
-            cache: UnsafeCell::new(cache_ptr),
-            element_count,
-            window_start_index: UnsafeCell::new(0), // start with the beginning of the remote data
-            iter_index: UnsafeCell::new(0),
-            window_size,
-            dirty: UnsafeCell::new(false), // Initialize with UnsafeCell<bool>
+        unsafe {
+            let reu_ptr = reu::reu().alloc(element_count*element_size as u32);
+            if cache_ptr.is_null() {
+                panic!();
+            }
+        
+            REUArray {
+                cache: UnsafeCell::new(cache_ptr),
+                element_count,
+                window_start_index: UnsafeCell::new(0), // start with the beginning of the remote data
+                iter_index: UnsafeCell::new(0),
+                window_size,
+                dirty: UnsafeCell::new(false), // Initialize with UnsafeCell<bool>
+                reu_address: reu_ptr,
+                element_size,
+            }
         }
     }
 
@@ -45,25 +59,30 @@ impl<T> REUArray<T> {
         let window_start_index = unsafe { *self.window_start_index.get() };
 
         if index < window_start_index || index >= window_start_index + self.window_size {
-            unsafe {                
-                self.prepare(*self.window_start_index.get());
+            unsafe {            
+                println!("Cache missed for {}",index);    
                 if *self.dirty.get() { 
+                    println!("Cache was dirty, commiting");
+                    self.prepare();
                     reu::reu().swap_out(); 
                     *self.dirty.get() = false;
                 }
-                self.prepare(index);
-                reu::reu().swap_in();
-
                 *self.window_start_index.get() = index;
+                self.prepare();
+                reu::reu().swap_in();
             }
         }
     }
 
-    fn prepare(&self, remote_index: u32) {
-        let element_size = mem::size_of::<T>() as u32;
-        let byte_count = element_size * self.window_size;
-        let cache_ptr = unsafe { *self.cache.get() };
-        reu::reu().prepare(cache_ptr as u16, remote_index * element_size as u32, byte_count as u16);
+    fn prepare(&self) {
+        unsafe {
+            let byte_count = self.element_size as u32 * self.window_size;
+            reu::reu().prepare(
+                *self.cache.get() as u16, 
+                self.reu_address.address + *self.window_start_index.get() * self.element_size as u32, 
+                byte_count as u16
+            );
+        }
     }
 }
 
@@ -131,6 +150,7 @@ impl<'a, T> Drop for REUArray<T> {
     fn drop(&mut self) {
         unsafe {
             free(*self.cache.get() as *mut u8);
+            reu::reu().dealloc(self.reu_address);
         }
     }
 }

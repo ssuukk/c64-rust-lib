@@ -3,8 +3,6 @@ use static_assertions::const_assert;
 use volatile_register::{RO, RW};
 use core::mem::size_of;
 
-use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
-
 pub mod wallocator;
 pub mod custom_slice;
 
@@ -106,15 +104,5 @@ impl RamExpanstionUnit {
             self.address_control.write(Control::FIX_REU.bits());
             self.command.write(Command::EXECUTE.bits() | Command::FROM_REU.bits() | Command::NO_FF00_DECODE.bits());
         }
-    }
-
-    pub unsafe fn lcopy(&mut self, source: u32, destination: u32, length: usize) {
-    }
-
-    pub fn lpeek(&mut self, src: u32) -> u8 {
-        // let dst: u8 = 0;
-        // self.copy(src, (dst as *mut u8) as u32, 1);
-        // dst
-        return 0;
     }
 }

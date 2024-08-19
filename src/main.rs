@@ -113,7 +113,7 @@ struct GameUnit {
 
 fn test_reu_slice() {
     // Allocate 100,000 GameUnit elements plus a cache that can hold 10 elements at a time
-    let mut array = REUArray::<GameUnit>::new(20, 10);
+    let mut array = REUArray::<GameUnit>::new(100, 10);
 
     println!("Setting Unit 1");
     array[1]=GameUnit { speed: 1, health: 2, x: 3, y: 4 };
@@ -128,7 +128,7 @@ fn test_reu_slice() {
     println!("Getting x at index 70000: {}", array[16].x);
 
     // find all ead units
-    let dead_units = array.into_iter().filter(|unit| unit.health == 0);
+    let dead_units = array.into_iter().filter(|unit| unit.x == 3);
 
     // print coords of dead units
     for u in dead_units {
