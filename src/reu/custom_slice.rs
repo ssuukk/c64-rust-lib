@@ -4,14 +4,11 @@ use core::cell::UnsafeCell;
 use crate::reu;
 use reu::wallocator::{ WAllocator, Ptr24 };
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
+use core::ptr;
 
 extern "C" {
     fn malloc(n: usize) -> *mut u8;
     fn free(ptr: *mut u8);
-    fn __heap_bytes_free() -> usize;
-    fn __heap_bytes_used() -> usize;
-    fn __set_heap_limit(limit: usize);
-    fn __heap_limit() -> usize;
 }
 
 pub struct REUArray<T> {
@@ -27,16 +24,14 @@ pub struct REUArray<T> {
 
 impl<T> REUArray<T> {
     pub fn new(element_count: u32, window_size: u32) -> Self {
-        // Allocate memory for the cache on the heap
         let element_size = mem::size_of::<T>();
         let cache_size = window_size as usize * element_size; 
-        let cache_ptr = unsafe { malloc(cache_size) as *mut T };
-
-        if cache_ptr.is_null() {
-            panic!();
-        }
 
         unsafe {
+            let cache_ptr = malloc(cache_size) as *mut T;
+            if cache_ptr.is_null() {
+                panic!();
+            }
             let reu_ptr = reu::reu().alloc(element_count*element_size as u32);
             if cache_ptr.is_null() {
                 panic!();
@@ -59,10 +54,10 @@ impl<T> REUArray<T> {
         let window_start_index = unsafe { *self.window_start_index.get() };
 
         if index < window_start_index || index >= window_start_index + self.window_size {
-            unsafe {            
-                println!("Cache missed for {}",index);    
+                // println!("Cache ptr in ensure {}", self.cache.get() as u16);
+                unsafe {            
+                // println!("Cache missed for {}, dirty={}",index,  *self.dirty.get());    
                 if *self.dirty.get() { 
-                    println!("Cache was dirty, commiting");
                     self.prepare();
                     reu::reu().swap_out(); 
                     *self.dirty.get() = false;
@@ -83,45 +78,6 @@ impl<T> REUArray<T> {
                 byte_count as u16
             );
         }
-    }
-}
-
-impl<T> Index<u32> for REUArray<T> {
-    type Output = T;
-
-    fn index(&self, index: u32) -> &Self::Output {
-        #[cfg(debug_assertions)]
-        assert!(
-            index < self.element_count,
-            "Index out of bounds: index = {}, size = {}",
-            index,
-            self.element_count
-        );
-
-        self.ensure_in_cache(index);
-
-        let cache_index = index - unsafe { *self.window_start_index.get() };
-        unsafe { &*((*self.cache.get()).offset(cache_index as isize)) }
-    }
-}
-
-impl<T> IndexMut<u32> for REUArray<T> {
-    fn index_mut(&mut self, index: u32) -> &mut Self::Output {
-        #[cfg(debug_assertions)]
-        assert!(
-            index < self.element_count,
-            "Index out of bounds: index = {}, size = {}",
-            index,
-            self.element_count
-        );
-
-        unsafe {
-            *self.dirty.get() = true;
-        }
-        self.ensure_in_cache(index);
-
-        let cache_index = index - unsafe { *self.window_start_index.get() };
-        unsafe { &mut *((*self.cache.get()).offset(cache_index as isize)) }
     }
 }
 
@@ -151,6 +107,57 @@ impl<'a, T> Drop for REUArray<T> {
         unsafe {
             free(*self.cache.get() as *mut u8);
             reu::reu().dealloc(self.reu_address);
+        }
+    }
+}
+
+impl<T: Clone> core::iter::ExactSizeIterator for REUArray<T> {
+    fn len(&self) -> usize {
+        self.element_count as usize
+    }
+}
+
+impl<T> Index<u32> for REUArray<T> {
+    type Output = T;
+
+    fn index(&self, index: u32) -> &Self::Output {
+        #[cfg(debug_assertions)]
+        assert!(
+            index < self.element_count,
+            "Index out of bounds: index = {}, size = {}",
+            index,
+            self.element_count
+        );
+
+        self.ensure_in_cache(index);
+
+        let cache_index = index - unsafe { *self.window_start_index.get() };
+
+        // Use volatile read to ensure fresh data is read from memory
+        unsafe {
+            let offset_ptr = (*self.cache.get()).offset(cache_index as isize);
+            &mut *offset_ptr // Correctly dereference the raw pointer to get a mutable reference
+        }
+    }
+}
+
+impl<T> IndexMut<u32> for REUArray<T> {
+    fn index_mut(&mut self, index: u32) -> &mut Self::Output {
+        #[cfg(debug_assertions)]
+        assert!(
+            index < self.element_count,
+            "Index out of bounds: index = {}, size = {}",
+            index,
+            self.element_count
+        );
+
+        unsafe {
+            *self.dirty.get() = true;
+            self.ensure_in_cache(index);
+
+            let cache_index = index - *self.window_start_index.get();
+            let offset_ptr = (*self.cache.get()).offset(cache_index as isize);
+            &mut *offset_ptr // Correctly dereference the raw pointer to get a mutable reference
         }
     }
 }
