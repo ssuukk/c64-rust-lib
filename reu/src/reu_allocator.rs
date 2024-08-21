@@ -19,14 +19,11 @@ pub struct Ptr24 {
     pub len: u32,
 }
 
-impl Ptr24 {
-    pub fn null_ptr() -> Self {
-        Ptr24 {
-            address: 0,
-            len: 0,
-        }
-    }
-}
+pub const NULL24: Ptr24 = Ptr24 {
+    address: 0,
+    len: 0,
+};
+
 
 impl fmt::Display for Ptr24 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -70,7 +67,7 @@ pub trait WAllocator {
 impl WAllocator for RamExpanstionUnit {
     unsafe fn alloc(&self, size: u32) -> Ptr24 {
         if size == 0 {
-            return Ptr24::null_ptr();
+            return NULL24;
         }
 
         // swap in BAM, it has to be swapped out before return
@@ -104,7 +101,7 @@ impl WAllocator for RamExpanstionUnit {
         }
 
         self.swap();
-        Ptr24::null_ptr()
+        NULL24
     }
 
     // Deallocation function

@@ -37,12 +37,8 @@ fn panic(info: &PanicInfo) -> ! {
 
 #[start] // atrybut oznaczający entrypoint
 fn _main(_argc: isize, _argv: *const *const u8) -> isize {
-
-    //change_border();
-
-    //test_hires();
+    //plotek_tests::test_hires();
     reu_tests::test_reu_slice();
 
-    //box_test();
     0
 }

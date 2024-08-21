@@ -7,6 +7,26 @@ pub const HIRES: *const C64HiresScreen = (0xa000) as _;
 //pub const SCREEN: &C64HiresScreen = unsafe { &*HIRES_SCREEN };
 pub const COLORS: *const C64TextScreen = (0x8400) as _;
 
+pub fn test_hires() {
+    unsafe {
+        change_border(vic2::RED);
+        (*HIRES).clear(0);
+        (*COLORS).clear(vic2::GREEN<<4 & vic2::RED);
+        //reu::reu().fill(0xa000, 8000, 0);
+        plotek::show(cia2::VicBankSelect::VIC_8000, ScreenBank::AT_0400);
+
+        for i in 0..32 {
+            (*HIRES).line((0,0),(i*10,199));
+            change_border(i as u8);
+        }
+    
+        wait_for_return();
+
+        plotek::hide();
+        change_border(vic2::LIGHT_BLUE);
+    }
+}
+
 pub fn change_border(col: u8) {
     let vic = c64::vic2();
     unsafe {
@@ -17,24 +37,5 @@ pub fn change_border(col: u8) {
 fn wait_for_return() {
     unsafe {
         cbm_kernal::cbm_k_chrin();
-    }
-}
-
-pub fn test_hires() {
-    unsafe {
-        change_border(vic2::RED);
-        (*HIRES).clear(0);
-        (*COLORS).clear(33);
-        //reu::reu().fill(0xa000, 8000, 0);
-        plotek::show(cia2::VicBankSelect::VIC_8000, ScreenBank::AT_0400);
-
-        for i in 0..32 {
-            (*HIRES).line((0,0),(i*10,199));
-        }
-    
-        wait_for_return();
-
-        plotek::hide();
-        change_border(vic2::LIGHT_BLUE);
     }
 }

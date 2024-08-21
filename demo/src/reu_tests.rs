@@ -31,7 +31,7 @@ pub fn test_reu_slice() {
     // Allocate 100,000 GameUnit elements plus a cache that can hold 10 elements at a time
     let mut array = REUArray::<GameUnit>::new(100, 10);
 
-    //println!("Tablica {}", array);
+    println!("Tablica {:?}", array);
 
     for i in 0..100 {
         array[i]=GameUnit { number: i as u8, speed: 1, health: 2, x: 3, y: 4 };
@@ -46,8 +46,8 @@ pub fn test_reu_slice() {
     // for u in dead_units {
     //     println!("{} Died at: ({},{})", u.number, u.x, u.y);
     // }
-    // for i in 0..100 {
-    //     let test = &array[i];
-    //     println!("numer:{} x,y=({},{})", test.number, test.x, test.y);
-    // }
+    for i in 0..100 {
+        let test = &array[i];
+        println!("numer:{} x,y=({},{})", test.number, test.x, test.y);
+    }
 }

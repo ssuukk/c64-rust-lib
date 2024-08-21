@@ -156,13 +156,19 @@ impl<T> IndexMut<u32> for REUArray<T> {
     }
 }
 
-impl<T> fmt::Display for REUArray<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Access UnsafeCell contents with unsafe block
-        let cache_ptr = unsafe { *self.cache.get() as usize };
-        let reu_address = self.reu_address.address;
+// impl<T> ufmt::uDebug for REUArray<T> {
+//     fn fmt<W>(&self, _: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error> {
+
+//     }
+// }       
+
+// impl<T> ufmt::uDisplay for REUArray<T> {
+//     fn fmt<U>(&self, f: &mut ufmt::Formatter<T>) -> ufmt::Result {
+//         // Access UnsafeCell contents with unsafe block
+//         let cache_ptr = unsafe { *self.cache.get() as usize };
+//         let reu_address = self.reu_address.address;
         
-        // Format cache pointer and reu_address as hex
-        write!(f, "cache: 0x{:X}, reu_address: 0x{:X}", cache_ptr, reu_address)
-    }
-}
+//         // Format cache pointer and reu_address as hex
+//         write!(f, "cache: 0x{:X}, reu_address: 0x{:X}", cache_ptr, reu_address)
+//     }
+// }
