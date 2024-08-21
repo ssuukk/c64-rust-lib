@@ -1,0 +1,15 @@
+[package]
+name = "reu"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitflags = "2.6.0"
+ufmt-stdio = "0.4.0" # https://docs.rs/ufmt-stdio/0.4.0/ufmt_stdio/
+static_assertions = "1.1"
+volatile-register = "0.2"
+
+[lib]
+path = "src/lib.rs"

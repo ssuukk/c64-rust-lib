@@ -1,0 +1,16 @@
+[package]
+name = "demo"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reu = { path = "../reu" }
+plotek = { path = "../plotek" }
+ultimate64 = { path = "../ultimate64" }
+
+ufmt-stdio = "0.4.0" # https://docs.rs/ufmt-stdio/0.4.0/ufmt_stdio/
+mos-hardware = "0.4.0" # https://docs.rs/mos-hardware/latest/mos_hardware/
+mos-alloc = "0.2" # https://docs.rs/mos-alloc/0.2.0/mos_alloc/
+static_assertions = "1.1"

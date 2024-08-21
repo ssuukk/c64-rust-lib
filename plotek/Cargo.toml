@@ -1,0 +1,13 @@
+[package]
+name = "plotek"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mos-hardware = "0.4.0" # https://docs.rs/mos-hardware/latest/mos_hardware/
+bitflags = "2.6.0"
+static_assertions = "1.1"
+volatile-register = "0.2"
+
+[lib]
+path = "src/lib.rs"
