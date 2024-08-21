@@ -3,6 +3,14 @@ name = "rust-mos-hello-world"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+members = [
+    "reu",
+    "plotek",
+    "ultimate64",
+    "demo",
+]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.dev]
@@ -21,20 +29,18 @@ ufmt = {git="https://github.com/mrk-its/ufmt", branch="ptr_width_16_fix"}
 ufmt-write = {git="https://github.com/mrk-its/ufmt", branch="ptr_width_16_fix"}
 
 [dependencies]
-# C stdio writer for ufmt
-# https://docs.rs/ufmt-stdio/0.4.0/ufmt_stdio/
-ufmt-stdio = "0.4.0"
+reu = { path = "./reu" }
+plotek = { path = "./plotek" }
+ultimate64 = { path = "./ultimate64" }
 
-# Hardware register tables and support functions for 8-bit retro computers like the Commodore 64, MEGA65 and others.
-# https://docs.rs/mos-hardware/latest/mos_hardware/
-mos-hardware = "0.4.0"
-
-# Allocator for mos-unknown-none target (https://github.com/mrk-its/rust/tree/mos_target) and number of utilities for setting max heap size / checking free / used memory
-# https://docs.rs/mos-alloc/0.2.0/mos_alloc/
-mos-alloc = "0.2"
-
+ufmt-stdio = "0.4.0" # https://docs.rs/ufmt-stdio/0.4.0/ufmt_stdio/
+mos-hardware = "0.4.0" # https://docs.rs/mos-hardware/latest/mos_hardware/
+mos-alloc = "0.2" # https://docs.rs/mos-alloc/0.2.0/mos_alloc/
 static_assertions = "1.1"
 bitflags = "2.6.0"
-# bitflags = "1"
 volatile-register = "0.2"
 volatile = "0.6.1"
+
+[[bin]]
+name = "demo"
+path = "desmo/src/main.rs"
