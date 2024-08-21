@@ -1,5 +1,5 @@
 [package]
-name = "rust-mos-hello-world"
+name = "c64-rust-lib"
 version = "0.1.0"
 edition = "2021"
 
@@ -43,4 +43,4 @@ volatile = "0.6.1"
 
 [[bin]]
 name = "demo"
-path = "desmo/src/main.rs"
+path = "./demo/src/main.rs"
