@@ -9,6 +9,17 @@ pub fn reu() -> &'static RamExpanstionUnit {
     unsafe { &*REU }
 }
 
+pub trait RawAddress {
+    fn as_address(&self) -> usize;
+}
+
+impl<T> RawAddress for T {
+    fn as_address(&self) -> usize {
+        let t_ptr = self as *const T;
+        t_ptr as usize
+    }
+}
+
 // https://www.codebase64.org/doku.php?id=base:reu_registers
 #[repr(C, packed)]
 pub struct RamExpanstionUnit {
@@ -56,10 +67,10 @@ const_assert!(size_of::<RamExpanstionUnit>() == 11);
 
 impl RamExpanstionUnit {
 
-    pub fn prepare(&self, c64_start: u16, reu_start: u32, length: u16) {
+    pub fn prepare(&self, c64_start: usize, reu_start: u32, length: u16) {
         unsafe {
             self.address_control.write(Control::NONE.bits());
-            self.c64_start.write(c64_start);
+            self.c64_start.write(c64_start as u16);
             self.reu_start_l.write((reu_start & 0xFF) as u8);        // LSB
             self.reu_start_m.write(((reu_start >> 8) & 0xFF) as u8);  // MSB
             self.reu_start_h.write(((reu_start >> 16) & 0xFF) as u8); // MOST SB
@@ -85,13 +96,9 @@ impl RamExpanstionUnit {
         }
     }
 
-    pub fn fill(&self, c64_start: u16, length: u16, value: u8) {
-        let temp = value;
-        let temp_ptr = &temp as *const u8;
-        let address_as_u16 = temp_ptr as u16;
-
+    pub fn fill(&self, c64_start: usize, length: u16, value: u8) {
         unsafe {
-            self.prepare(address_as_u16, 0, 1);
+            self.prepare(value.as_address(), 0, 1);
             self.command.write(Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits());
             self.prepare(c64_start, 0, length);
             self.address_control.write(Control::FIX_REU.bits());

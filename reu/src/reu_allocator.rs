@@ -67,7 +67,7 @@ impl WAllocator for RamExpanstionUnit {
         }
 
         // swap in BAM, it has to be swapped out before return
-        self.prepare(BITMAP_ADDRESS as u16, BITMAP_REU_ADDRESS, 8192);
+        self.prepare(BITMAP_ADDRESS, BITMAP_REU_ADDRESS, 8192);
         self.swap();
 
         let blocks_needed = count_blocks(size);

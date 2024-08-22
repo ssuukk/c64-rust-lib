@@ -3,6 +3,7 @@ use reu::reu_allocator::{ Ptr24, WAllocator };
 use reu::ram_expansion_unit;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 use core::ptr;
+use reu::ram_expansion_unit::RawAddress;
 
 pub fn reu_test() {
     ram_expansion_unit::reu().fill(1024, 80, 65);
@@ -28,31 +29,28 @@ struct GameUnit {
 }
 
 pub fn test_memory() {
-    let unit = ram_expansion_unit::reu();
-
+    let reu = ram_expansion_unit::reu();
     let mut t = 0xdeadbeefu32;
+    
     let t_ptr = &t as *const u32;
-    let t_addr_u16 = t_ptr as usize;
+    let t_addr = t.as_address();
 
-    println!("Storing addr {} in reu", t_addr_u16);
+    for i in 0..16 {
+        let addr = i * 0x10000;
+        print!("reu at ${:x} = ", addr);
 
-    unit.prepare(t_addr_u16 as u16, 0, 1000);
-    unit.swap_out();
-    t = 0;
-    if t > 0 {
+        reu.prepare(t_addr, addr, 1000);
+        reu.swap_out();
+        t = 0;
+        if t > 0 {
 
+        }
+        reu.swap_in();
+        // Force the compiler to read `t` from memory
+        let current_t = unsafe { ptr::read_volatile(t_ptr) };
+        let reu_ok = current_t == 0xdeadbeefu32;
+        println!("{}", reu_ok);
     }
-
-    unit.swap_in();
-
-    // Force the compiler to read `t` from memory
-    let current_t = unsafe { ptr::read_volatile(t_ptr) };
-
-    println!("read from reu: {}", current_t);
-
-    let reu_ok = current_t == 0xdeadbeefu32;
-
-    println!("reu ok: {}", reu_ok);
 }
 
 pub fn test_reu_slice() {

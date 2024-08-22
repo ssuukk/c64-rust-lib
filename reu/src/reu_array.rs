@@ -92,7 +92,7 @@ impl<T> REUArray<T> {
         unsafe {
             let byte_count = self.element_size as u32 * self.window_size;
             ram_expansion_unit::reu().prepare(
-                *self.cache.get() as u16, 
+                *self.cache.get() as usize, 
                 self.reu_address.address + *self.window_start_index.get() * self.element_size as u32, 
                 byte_count as u16
             );
