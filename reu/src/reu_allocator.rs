@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use core::fmt;
 use crate::ram_expansion_unit::RamExpanstionUnit;
 
 const MEMORY_POOL_START: u32 = 0x012000;
@@ -14,14 +13,14 @@ const BITMAP_REU_ADDRESS: u32 = 0x010000;
 static mut BOM: *mut u8 = 0xc000 as *mut u8;
 
 #[derive(Clone, Copy)]
-pub struct Ptr24 {
+pub struct ReuChunk {
     pub address: u32,
     pub len: u32,
 }
 
-impl ufmt::uDebug for Ptr24 {
+impl ufmt::uDebug for ReuChunk {
     fn fmt<W: ufmt::uWrite + ?Sized>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error> {
-        f.write_str("Ptr24:")?;
+        f.write_str("ReuChunk:")?;
         self.address.fmt(f)?;
         Ok(())
     }
@@ -56,18 +55,18 @@ fn count_blocks(size: u32) -> usize {
 }
 
 pub trait WAllocator {
-    unsafe fn alloc(&self, size: u32) -> Ptr24;
-    unsafe fn dealloc(&self, ptr: Ptr24);
+    unsafe fn alloc(&self, size: u32) -> ReuChunk;
+    unsafe fn dealloc(&self, ptr: ReuChunk);
 }
 
 impl WAllocator for RamExpanstionUnit {
-    unsafe fn alloc(&self, size: u32) -> Ptr24 {
+    unsafe fn alloc(&self, size: u32) -> ReuChunk {
         if size == 0 {
             panic!("reu 0 alloc");
         }
 
         // swap in BAM, it has to be swapped out before return
-        self.prepare(BITMAP_ADDRESS, BITMAP_REU_ADDRESS, 8192);
+        self.set_range(BITMAP_ADDRESS, BITMAP_REU_ADDRESS, 8192);
         self.swap();
 
         let blocks_needed = count_blocks(size);
@@ -86,7 +85,7 @@ impl WAllocator for RamExpanstionUnit {
                         mark_occupied(j);
                     }
                     self.swap();
-                    return Ptr24 {
+                    return ReuChunk {
                         address: MEMORY_POOL_START + ((start_block * BLOCK_SIZE) as u32),
                         len: size,
                     };
@@ -101,7 +100,7 @@ impl WAllocator for RamExpanstionUnit {
     }
 
     // Deallocation function
-    unsafe fn dealloc(&self, ptr: Ptr24) {
+    unsafe fn dealloc(&self, ptr: ReuChunk) {
         if ptr.address == 0 {
             return;
         }

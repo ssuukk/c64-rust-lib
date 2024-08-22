@@ -1,5 +1,5 @@
 use reu::REUArray;
-use reu::reu_allocator::{ Ptr24, WAllocator };
+use reu::reu_allocator::{ ReuChunk, WAllocator };
 use reu::ram_expansion_unit;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 use core::ptr;
@@ -7,13 +7,13 @@ use reu::ram_expansion_unit::RawAddress;
 
 pub fn reu_test() {
     ram_expansion_unit::reu().fill(1024, 80, 65);
-    // reu::reu().prepare(0x400, 0xaabbcc, 500);
-    // reu::reu().swap_in();
+    // reu::reu().set_range(0x400, 0xaabbcc, 500);
+    // reu::reu().pull();
 }
 
 pub fn alloc_test() {
     unsafe {
-        let ptr: Ptr24 = ram_expansion_unit::reu().alloc(0x2000);
+        let ptr: ReuChunk = ram_expansion_unit::reu().alloc(0x2000);
         println!("got reu chunk: {:?}!", ptr);
         ram_expansion_unit::reu().dealloc(ptr);
     }
@@ -35,17 +35,17 @@ pub fn test_memory() {
     let t_ptr = &t as *const u32;
     let t_addr = t.as_address();
 
-    for i in 0..16 {
-        let addr = i * 0x10000;
-        print!("reu at ${:x} = ", addr);
+    for i in 0..0x10 {
+        let reu_addr = i * 0x100000;
+        print!("reu at ${:x} = ", reu_addr);
 
-        reu.prepare(t_addr, addr, 1000);
-        reu.swap_out();
+        reu.set_range(t_addr, reu_addr, 1000);
+        reu.push();
         t = 0;
         if t > 0 {
 
         }
-        reu.swap_in();
+        reu.pull();
         // Force the compiler to read `t` from memory
         let current_t = unsafe { ptr::read_volatile(t_ptr) };
         let reu_ok = current_t == 0xdeadbeefu32;

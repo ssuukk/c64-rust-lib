@@ -26,7 +26,7 @@ fn test_hires() {
 }
 ```
 
-- Basic REU functions (swap_in, swap_out, swap)
+- Basic REU functions (pull, push, swap)
 - REUArray (up to 16mb array transparently swapped into C64 memory as needed)
 
 ```
@@ -67,7 +67,7 @@ fn test_reu_slice() {
 - A simple REU allocator (minimum allocation unit - 256 bytes) plus 24-bit pointer
 
 ```
-        let ptr: Ptr24 = reu::reu().alloc(70000);
+        let ptr: ReuChunk = reu::reu().alloc(70000);
 ```
 
 - Ultimate 64 speed registers

@@ -67,7 +67,7 @@ const_assert!(size_of::<RamExpanstionUnit>() == 11);
 
 impl RamExpanstionUnit {
 
-    pub fn prepare(&self, c64_start: usize, reu_start: u32, length: u16) {
+    pub fn set_range(&self, c64_start: usize, reu_start: u32, length: u16) {
         unsafe {
             self.address_control.write(Control::NONE.bits());
             self.c64_start.write(c64_start as u16);
@@ -78,13 +78,13 @@ impl RamExpanstionUnit {
         }
     }
 
-    pub fn swap_in(&self) {
+    pub fn pull(&self) {
         unsafe {
             self.command.write(Command::EXECUTE.bits() | Command::FROM_REU.bits() | Command::NO_FF00_DECODE.bits() | Command::AUTOLOAD.bits());
         }
     }
 
-    pub fn swap_out(&self) {
+    pub fn push(&self) {
         unsafe {
             self.command.write(Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits() | Command::AUTOLOAD.bits());
         }
@@ -98,9 +98,9 @@ impl RamExpanstionUnit {
 
     pub fn fill(&self, c64_start: usize, length: u16, value: u8) {
         unsafe {
-            self.prepare(value.as_address(), 0, 1);
+            self.set_range(value.as_address(), 0, 1);
             self.command.write(Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits());
-            self.prepare(c64_start, 0, length);
+            self.set_range(c64_start, 0, length);
             self.address_control.write(Control::FIX_REU.bits());
             self.command.write(Command::EXECUTE.bits() | Command::FROM_REU.bits() | Command::NO_FF00_DECODE.bits());
         }

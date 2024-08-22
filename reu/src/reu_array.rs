@@ -1,9 +1,8 @@
 use core::ops::{Index, IndexMut};
 use core::mem;
 use core::cell::UnsafeCell;
-use core::fmt;
 use crate::ram_expansion_unit;
-use crate::reu_allocator::{ Ptr24, WAllocator };
+use crate::reu_allocator::{ ReuChunk, WAllocator };
 
 extern "C" {
     fn malloc(n: usize) -> *mut u8;
@@ -17,7 +16,7 @@ pub struct REUArray<T> {
     iter_index: UnsafeCell<u32>,      // UnsafeCell to allow interior mutability
     window_size: u32,
     dirty: UnsafeCell<bool>, // Changed from bool to UnsafeCell<bool>
-    reu_address: Ptr24,
+    reu_address: ReuChunk,
     element_size: usize,
 }
 
@@ -29,12 +28,9 @@ impl<T> REUArray<T> {
         unsafe {
             let cache_ptr = malloc(cache_size) as *mut T;
             if cache_ptr.is_null() {
-                panic!();
+                panic!("out of memory");
             }
             let reu_ptr = ram_expansion_unit::reu().alloc(element_count*element_size as u32);
-            if cache_ptr.is_null() {
-                panic!();
-            }
         
             REUArray {
                 cache: UnsafeCell::new(cache_ptr),
@@ -59,13 +55,13 @@ impl<T> REUArray<T> {
             unsafe {            
                 // println!("Cache missed for {}, dirty={}",index,  *self.dirty.get());    
                 if *self.dirty.get() { 
-                    self.prepare_swap();
-                    ram_expansion_unit::reu().swap_out(); 
+                    self.prepare_slice();
+                    ram_expansion_unit::reu().push(); 
                     *self.dirty.get() = false;
                 }
                 *self.window_start_index.get() = index;
-                self.prepare_swap();
-                ram_expansion_unit::reu().swap_in();
+                self.prepare_slice();
+                ram_expansion_unit::reu().pull();
             }
         }
     }
@@ -73,7 +69,7 @@ impl<T> REUArray<T> {
     fn check_bounds(&self, index: u32) {
         assert!(
             index < self.element_count,
-            "Index out of bounds: index = {}, size = {}",
+            "index {}/{}",
             index,
             self.element_count
         );
@@ -88,10 +84,10 @@ impl<T> REUArray<T> {
         }
     }
 
-    fn prepare_swap(&self) {
+    fn prepare_slice(&self) {
         unsafe {
             let byte_count = self.element_size as u32 * self.window_size;
-            ram_expansion_unit::reu().prepare(
+            ram_expansion_unit::reu().set_range(
                 *self.cache.get() as usize, 
                 self.reu_address.address + *self.window_start_index.get() * self.element_size as u32, 
                 byte_count as u16
