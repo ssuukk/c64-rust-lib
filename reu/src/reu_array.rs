@@ -156,19 +156,23 @@ impl<T> IndexMut<u32> for REUArray<T> {
     }
 }
 
-// impl<T> ufmt::uDebug for REUArray<T> {
-//     fn fmt<W>(&self, _: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error> {
-
-//     }
-// }       
-
-// impl<T> ufmt::uDisplay for REUArray<T> {
-//     fn fmt<U>(&self, f: &mut ufmt::Formatter<T>) -> ufmt::Result {
-//         // Access UnsafeCell contents with unsafe block
-//         let cache_ptr = unsafe { *self.cache.get() as usize };
-//         let reu_address = self.reu_address.address;
-        
-//         // Format cache pointer and reu_address as hex
-//         write!(f, "cache: 0x{:X}, reu_address: 0x{:X}", cache_ptr, reu_address)
-//     }
-// }
+impl<T> ufmt::uDebug for REUArray<T> {
+    fn fmt<W: ufmt::uWrite + ?Sized>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error> {
+        let cache_ptr = unsafe { *self.cache.get() };
+        f.write_str("ReuArray of ")?;
+        self.element_count.fmt(f)?;
+        f.write_str("\nl:")?;
+        cache_ptr.fmt(f)?;
+        f.write_str("  r:")?;
+        self.reu_address.fmt(f)?;
+        f.write_str("\nwindow=")?;
+        unsafe {
+            let ws = *self.window_start_index.get();
+            let dr = *self.dirty.get();
+            ws.fmt(f)?;
+            f.write_str(" dirty=")?;
+            dr.fmt(f)?;
+        }
+        Ok(())
+    }
+}       

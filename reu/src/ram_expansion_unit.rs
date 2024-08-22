@@ -55,6 +55,7 @@ bitflags! {
 const_assert!(size_of::<RamExpanstionUnit>() == 11);
 
 impl RamExpanstionUnit {
+
     pub fn prepare(&self, c64_start: u16, reu_start: u32, length: u16) {
         unsafe {
             self.address_control.write(Control::NONE.bits());

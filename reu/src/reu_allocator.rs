@@ -19,17 +19,13 @@ pub struct Ptr24 {
     pub len: u32,
 }
 
-pub const NULL24: Ptr24 = Ptr24 {
-    address: 0,
-    len: 0,
-};
-
-
-impl fmt::Display for Ptr24 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Ptr24 {{ address: {}, len: {} }}", self.address, self.len)
+impl ufmt::uDebug for Ptr24 {
+    fn fmt<W: ufmt::uWrite + ?Sized>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error> {
+        f.write_str("Ptr24:")?;
+        self.address.fmt(f)?;
+        Ok(())
     }
-}
+}       
 
 fn mark_occupied(index: usize) {
     let byte_index = index / 8;
@@ -67,7 +63,7 @@ pub trait WAllocator {
 impl WAllocator for RamExpanstionUnit {
     unsafe fn alloc(&self, size: u32) -> Ptr24 {
         if size == 0 {
-            return NULL24;
+            panic!("reu 0 alloc");
         }
 
         // swap in BAM, it has to be swapped out before return
@@ -101,7 +97,7 @@ impl WAllocator for RamExpanstionUnit {
         }
 
         self.swap();
-        NULL24
+        panic!("out of reu memory");
     }
 
     // Deallocation function
@@ -118,4 +114,3 @@ impl WAllocator for RamExpanstionUnit {
         }
     }
 }
-

@@ -21,24 +21,36 @@ mod reu_tests;
 mod plotek_tests;
 mod ultimate_tests;
 
-#[panic_handler] // wymagany w programach bez std
-fn panic(info: &PanicInfo) -> ! {
-    // Check if there's a payload (message) in the panic info
-    
-    if info.message().is_some() {
-        // If the message is Some, we can safely use it
-        println!("PANIC: with a message");
-    } else {
-        // Handle the case where the message is None
-        println!("PANIC: occurred!");
+use core::fmt::{self, Write};
+
+struct SimpleWriter;
+
+impl Write for SimpleWriter {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        print!("{}",s);
+        Ok(())
     }
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    let mut writer = SimpleWriter;
+
+    if let Some(message) = info.message() {
+        let _ = writeln!(writer, "?{} panic", message);
+    } else {
+        let _ = writeln!(writer, "?panic");
+    }
+
     loop {}
 }
 
 #[start] // atrybut oznaczający entrypoint
 fn _main(_argc: isize, _argv: *const *const u8) -> isize {
     //plotek_tests::test_hires();
-    reu_tests::test_reu_slice();
+    //reu_tests::test_reu_slice();
+    reu_tests::test_memory();
+    reu_tests::alloc_test();
 
     0
 }
