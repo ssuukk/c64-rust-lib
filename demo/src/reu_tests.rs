@@ -1,7 +1,6 @@
 use core::ptr;
 use reu::ram_expansion_unit;
 use reu::ram_expansion_unit::RawAddress;
-use reu::reu_allocator::ReuChunk;
 use reu::REUArray;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
@@ -72,16 +71,9 @@ pub fn test_reu_slice() {
     array[50].x = 69;
     array[50].y = 11;
 
-    // find all ead units
-    // let dead_units = array.into_iter().filter(|unit| unit.x == 66);
+    let sixty_nine = array.iter_mut().filter(|unit| unit.x == 69);
 
-    // // print coords of dead units
-    // for u in dead_units {
-    //     println!("{} Died at: ({},{})", u.number, u.x, u.y);
-    // }
-    for i in 0..100 {
-        let test = &array[i];
-        println!("numer:{} x,y=({},{})", test.number, test.x, test.y);
-        //println!("{:?}", array);
+    for u in sixty_nine {
+        println!("{} Unit at x=69: ({},{})", u.number, u.x, u.y);
     }
 }

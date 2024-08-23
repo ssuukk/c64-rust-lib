@@ -13,7 +13,6 @@ pub struct REUArray<T> {
     cache: UnsafeCell<*mut T>, // Pointer to the heap-allocated cache wrapped in UnsafeCell
     capacity: u32,             // Total number of elements in the remote data
     window_start_index: UnsafeCell<u32>, // The starting index of the current window in the remote data
-    iter_index: UnsafeCell<u32>,         // UnsafeCell to allow interior mutability
     window_size: u32,
     dirty: UnsafeCell<bool>, // Changed from bool to UnsafeCell<bool>
     reu_chunk: ReuChunk,
@@ -37,7 +36,6 @@ impl<T> REUArray<T> {
                 cache: UnsafeCell::new(cache_ptr),
                 capacity,
                 window_start_index: UnsafeCell::new(0), // start with the beginning of the remote data
-                iter_index: UnsafeCell::new(0),
                 window_size,
                 dirty: UnsafeCell::new(false), // Initialize with UnsafeCell<bool>
                 reu_chunk: reu_ptr,
@@ -59,11 +57,7 @@ impl<T> REUArray<T> {
         let window_start_index = unsafe { *self.window_start_index.get() };
 
         if index < window_start_index || index >= window_start_index + self.window_size {
-            //println!("index {:?}", self);
-
-            // println!("Cache ptr in ensure {}", self.cache.get() as u16);
             unsafe {
-                // println!("Cache missed for {}, dirty={}",index,  *self.dirty.get());
                 if *self.dirty.get() {
                     self.prepare_slice();
                     ram_expansion_unit::reu().push();
@@ -104,40 +98,47 @@ impl<T> REUArray<T> {
             );
         }
     }
+
+    pub fn iter_mut(&mut self) -> REUArrayIterMut<T> {
+        REUArrayIterMut {
+            reu_array: self,
+            index: 0,
+        }
+    }
 }
 
-impl<T> Iterator for REUArray<T>
-where
-    T: Clone, // Ensure T can be cloned
-{
-    type Item = T; // Return owned values instead of references
+pub struct REUArrayIterMut<'a, T> {
+    reu_array: &'a mut REUArray<T>,
+    index: u32,
+}
+
+impl<'a, T> Iterator for REUArrayIterMut<'a, T> {
+    type Item = &'a mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let iter_index = unsafe { &mut *self.iter_index.get() };
+        if self.index < self.reu_array.element_count {
+            self.reu_array.ensure_in_cache(self.index);
 
-        if *iter_index < self.element_count {
-            self.ensure_in_cache(*iter_index);
-
-            let item = self[*iter_index].clone(); // Clone the item
-            *iter_index += 1;
+            // Temporarily split the borrow to avoid issues with mutable references
+            let window_start_index = unsafe { *self.reu_array.window_start_index.get() };
+            let index_in_window = self.index - window_start_index;
+            let item = unsafe {
+                let cache_ptr = *self.reu_array.cache.get();
+                let item_ptr = cache_ptr.add(index_in_window as usize);
+                &mut *item_ptr
+            };
+            self.index += 1;
             Some(item)
         } else {
             None
         }
     }
 }
-
 impl<'a, T> Drop for REUArray<T> {
     fn drop(&mut self) {
         unsafe {
             free(*self.cache.get() as *mut u8);
         }
-    }
-}
-
-impl<T: Clone> core::iter::ExactSizeIterator for REUArray<T> {
-    fn len(&self) -> usize {
-        self.element_count as usize
     }
 }
 
