@@ -3,17 +3,15 @@
 
 pub mod cia2;
 
-use mos_hardware::vic2::{ ScreenBank, ControlYFlags };
+use cia2::{set_vic_bank, VicBankSelect};
 use mos_hardware::c64::vic2;
-use cia2::{ VicBankSelect, set_vic_bank };
+use mos_hardware::vic2::{ControlYFlags, ScreenBank};
 
 pub trait CharMatrix {
     fn clear(&self, value: u8);
 }
 
-pub struct C64TextScreen {
-
-}
+pub struct C64TextScreen {}
 
 impl CharMatrix for C64TextScreen {
     fn clear(&self, value: u8) {
@@ -27,8 +25,7 @@ pub trait PixelMatrix {
     fn clear(&self, value: u8);
 }
 
-pub struct C64HiresScreen {
-}
+pub struct C64HiresScreen {}
 
 impl PixelMatrix for C64HiresScreen {
     fn plot(&self, x: u16, y: u8) {
@@ -56,20 +53,20 @@ impl PixelMatrix for C64HiresScreen {
         let mut y0 = start.1;
         let x1 = end.0;
         let y1 = end.1;
-    
+
         let dx = (x1 as i16 - x0 as i16).abs();
         let dy = (y1 as i16 - y0 as i16).abs();
         let sx = if x0 < x1 { 1 } else { -1 };
         let sy = if y0 < y1 { 1 } else { -1 };
         let mut err = dx - dy;
-    
+
         loop {
             self.plot(x0, y0);
-    
+
             if x0 == x1 && y0 == y1 {
                 break;
             }
-    
+
             let e2 = 2 * err;
             if e2 > -dy {
                 err -= dy;
@@ -93,7 +90,7 @@ fn clear(start_addr: *mut u8, size: usize, value: u8) {
 
 pub fn hide() {
     unsafe {
-        set_vic_bank( VicBankSelect::VIC_0000 );
+        set_vic_bank(VicBankSelect::VIC_0000);
         vic2().screen_and_charset_bank.write(21);
         set_bitmap_mode(false);
     }
@@ -104,8 +101,8 @@ fn set_bitmap_mode(on: bool) {
         // zrobić według tabeli na końcu: https://c64os.com/post/rethinkingthememmap
         let mut ctrl_reg_1 = vic2().control_y.read();
         ctrl_reg_1.set(ControlYFlags::BITMAP_MODE, on); // and bit 5 (BMM) must be set.
-        //ctrl_reg_1.set(ControlYFlags::EXTENDED_COLOR_MODE, false); // bit 6 (ECM) must be cleared
-        vic2().control_y.write(ctrl_reg_1); 
+                                                        //ctrl_reg_1.set(ControlYFlags::EXTENDED_COLOR_MODE, false); // bit 6 (ECM) must be cleared
+        vic2().control_y.write(ctrl_reg_1);
     }
 }
 

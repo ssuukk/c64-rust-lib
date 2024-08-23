@@ -14,8 +14,8 @@ pub fn get() -> &'static U64TurboRegs {
 
 #[repr(C, packed)]
 pub struct U64TurboRegs {
-    pub turbo_enable: RW<u8>,     // D030
-    pub turbo_control: RW<u8>,    // D031
+    pub turbo_enable: RW<u8>,  // D030
+    pub turbo_control: RW<u8>, // D031
 }
 
 // for turbo_enable
@@ -38,7 +38,7 @@ bitflags! {
 
 impl U64TurboRegs {
     pub fn set_speed(&self, speed: u8) {
-        unsafe {        
+        unsafe {
             self.turbo_control.write(speed);
         }
     }

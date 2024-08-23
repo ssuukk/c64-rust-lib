@@ -1,8 +1,8 @@
 use bitflags::bitflags;
 use core::mem::size_of;
+use mos_hardware::cia::TimeOfDay;
 use static_assertions::const_assert;
 use volatile_register::RW;
-use mos_hardware::cia::TimeOfDay;
 
 // https://sta.c64.org/cbm64mem.html
 
@@ -35,7 +35,6 @@ bitflags! {
     }
 }
 
-
 bitflags! {
     #[derive(Clone, Copy)]
     pub struct RS232Access: u8 {
@@ -44,7 +43,7 @@ bitflags! {
 
 #[repr(C, packed)]
 pub struct MOSComplexInterfaceAdapter6526_2 {
-    pub port_a: RW<VicBankSelect>,   // 0x00
+    pub port_a: RW<VicBankSelect>,     // 0x00
     pub port_b: RW<RS232Access>,       // 0x01
     pub data_direction_port_a: RW<u8>, // 0x02
     pub data_direction_port_b: RW<u8>, // 0x03
@@ -64,6 +63,8 @@ pub fn set_vic_bank(bank: VicBankSelect) {
         let dir_a = cia2().data_direction_port_a.read();
         let port_a = cia2().port_a.read();
         cia2().data_direction_port_a.write(dir_a | 0b11);
-        cia2().port_a.write(port_a & VicBankSelect::VIC_0000.complement() | bank);
+        cia2()
+            .port_a
+            .write(port_a & VicBankSelect::VIC_0000.complement() | bank);
     }
 }

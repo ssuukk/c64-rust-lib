@@ -1,7 +1,7 @@
 // tak się buduje:
-// cargo build --target mos-c64-none 
+// cargo build --target mos-c64-none
 // opcjonalnie dodać --release
-// 
+//
 // kopiowanie wyniku:
 // docker cp determined_williamson:/workspaces/c64-rust-lib/target/mos-c64-none/release/rust-mos-hello-world D:/temp/rust
 // otwarcie terminala kontenera: ctrl+shift+`
@@ -14,11 +14,11 @@
 extern crate mos_alloc;
 
 use core::panic::PanicInfo; // struktura zawierająca info o panic
-// use core::alloc::GlobalAlloc;
+                            // use core::alloc::GlobalAlloc;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
-mod reu_tests;
 mod plotek_tests;
+mod reu_tests;
 mod ultimate_tests;
 
 use core::fmt::{self, Write};
@@ -27,7 +27,7 @@ struct SimpleWriter;
 
 impl Write for SimpleWriter {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        print!("{}",s);
+        print!("{}", s);
         Ok(())
     }
 }

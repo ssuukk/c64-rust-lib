@@ -1,9 +1,9 @@
-use reu::REUArray;
-use reu::reu_allocator::{ ReuChunk, WAllocator };
-use reu::ram_expansion_unit;
-use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 use core::ptr;
+use reu::ram_expansion_unit;
 use reu::ram_expansion_unit::RawAddress;
+use reu::reu_allocator::{ReuChunk, WAllocator};
+use reu::REUArray;
+use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
 pub fn reu_test() {
     ram_expansion_unit::reu().fill(1024, 80, 65);
@@ -13,9 +13,9 @@ pub fn reu_test() {
 
 pub fn alloc_test() {
     unsafe {
-        let ptr: ReuChunk = ram_expansion_unit::reu().alloc(0x2000);
-        println!("got reu chunk: {:?}!", ptr);
-        ram_expansion_unit::reu().dealloc(ptr);
+        let chunk = ram_expansion_unit::reu().alloc(0x2000);
+        println!("got reu chunk: {:?}!", chunk);
+        ram_expansion_unit::reu().dealloc(chunk);
     }
 }
 
@@ -31,7 +31,7 @@ struct GameUnit {
 pub fn test_memory() {
     let reu = ram_expansion_unit::reu();
     let mut t = 0xdeadbeefu32;
-    
+
     let t_ptr = &t as *const u32;
     let t_addr = t.as_address();
 
@@ -42,9 +42,7 @@ pub fn test_memory() {
         reu.set_range(t_addr, reu_addr, 1000);
         reu.push();
         t = 0;
-        if t > 0 {
-
-        }
+        if t > 0 {}
         reu.pull();
         // Force the compiler to read `t` from memory
         let current_t = unsafe { ptr::read_volatile(t_ptr) };
@@ -58,7 +56,13 @@ pub fn test_reu_slice() {
     let mut array = REUArray::<GameUnit>::new(100, 10);
 
     for i in 0..100 {
-        array[i]=GameUnit { number: i as u8, speed: 1, health: 2, x: 3, y: 4 };
+        array[i] = GameUnit {
+            number: i as u8,
+            speed: 1,
+            health: 2,
+            x: 3,
+            y: 4,
+        };
     }
 
     array[50].speed = 0xa;

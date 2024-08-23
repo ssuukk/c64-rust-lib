@@ -1,8 +1,8 @@
-use core::ops::{Index, IndexMut};
-use core::mem;
-use core::cell::UnsafeCell;
 use crate::ram_expansion_unit;
-use crate::reu_allocator::{ ReuChunk, WAllocator };
+use crate::reu_allocator::{ReuChunk, WAllocator};
+use core::cell::UnsafeCell;
+use core::mem;
+use core::ops::{Index, IndexMut};
 
 extern "C" {
     fn malloc(n: usize) -> *mut u8;
@@ -10,10 +10,10 @@ extern "C" {
 }
 
 pub struct REUArray<T> {
-    cache: UnsafeCell<*mut T>,  // Pointer to the heap-allocated cache wrapped in UnsafeCell
-    element_count: u32,            // Total number of elements in the remote data
-    window_start_index: UnsafeCell<u32>,  // The starting index of the current window in the remote data
-    iter_index: UnsafeCell<u32>,      // UnsafeCell to allow interior mutability
+    cache: UnsafeCell<*mut T>, // Pointer to the heap-allocated cache wrapped in UnsafeCell
+    element_count: u32,        // Total number of elements in the remote data
+    window_start_index: UnsafeCell<u32>, // The starting index of the current window in the remote data
+    iter_index: UnsafeCell<u32>,         // UnsafeCell to allow interior mutability
     window_size: u32,
     dirty: UnsafeCell<bool>, // Changed from bool to UnsafeCell<bool>
     reu_address: ReuChunk,
@@ -23,15 +23,15 @@ pub struct REUArray<T> {
 impl<T> REUArray<T> {
     pub fn new(element_count: u32, window_size: u32) -> Self {
         let element_size = mem::size_of::<T>();
-        let cache_size = window_size as usize * element_size; 
+        let cache_size = window_size as usize * element_size;
 
         unsafe {
             let cache_ptr = malloc(cache_size) as *mut T;
             if cache_ptr.is_null() {
                 panic!("out of memory");
             }
-            let reu_ptr = ram_expansion_unit::reu().alloc(element_count*element_size as u32);
-        
+            let reu_ptr = ram_expansion_unit::reu().alloc(element_count * element_size as u32);
+
             REUArray {
                 cache: UnsafeCell::new(cache_ptr),
                 element_count,
@@ -52,11 +52,11 @@ impl<T> REUArray<T> {
             //println!("index {:?}", self);
 
             // println!("Cache ptr in ensure {}", self.cache.get() as u16);
-            unsafe {            
-                // println!("Cache missed for {}, dirty={}",index,  *self.dirty.get());    
-                if *self.dirty.get() { 
+            unsafe {
+                // println!("Cache missed for {}, dirty={}",index,  *self.dirty.get());
+                if *self.dirty.get() {
                     self.prepare_slice();
-                    ram_expansion_unit::reu().push(); 
+                    ram_expansion_unit::reu().push();
                     *self.dirty.get() = false;
                 }
                 *self.window_start_index.get() = index;
@@ -88,15 +88,16 @@ impl<T> REUArray<T> {
         unsafe {
             let byte_count = self.element_size as u32 * self.window_size;
             ram_expansion_unit::reu().set_range(
-                *self.cache.get() as usize, 
-                self.reu_address.address + *self.window_start_index.get() * self.element_size as u32, 
-                byte_count as u16
+                *self.cache.get() as usize,
+                self.reu_address.address
+                    + *self.window_start_index.get() * self.element_size as u32,
+                byte_count as u16,
             );
         }
     }
 }
 
-impl<T> Iterator for REUArray<T> 
+impl<T> Iterator for REUArray<T>
 where
     T: Clone, // Ensure T can be cloned
 {
@@ -153,7 +154,10 @@ impl<T> IndexMut<u32> for REUArray<T> {
 }
 
 impl<T> ufmt::uDebug for REUArray<T> {
-    fn fmt<W: ufmt::uWrite + ?Sized>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error> {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
         let cache_ptr = unsafe { *self.cache.get() };
         f.write_str("ReuArray of ")?;
         self.element_count.fmt(f)?;
@@ -171,4 +175,4 @@ impl<T> ufmt::uDebug for REUArray<T> {
         }
         Ok(())
     }
-}       
+}

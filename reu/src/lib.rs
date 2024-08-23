@@ -5,7 +5,6 @@ pub mod ram_expansion_unit;
 pub mod reu_allocator;
 pub mod reu_array;
 
-pub use reu_array::REUArray;
 pub use ram_expansion_unit::RamExpanstionUnit;
 pub use reu_allocator::WAllocator;
-
+pub use reu_array::REUArray;

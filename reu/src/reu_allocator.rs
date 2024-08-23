@@ -19,12 +19,15 @@ pub struct ReuChunk {
 }
 
 impl ufmt::uDebug for ReuChunk {
-    fn fmt<W: ufmt::uWrite + ?Sized>(&self, f: &mut ufmt::Formatter<'_, W>) -> Result<(), W::Error> {
+    fn fmt<W: ufmt::uWrite + ?Sized>(
+        &self,
+        f: &mut ufmt::Formatter<'_, W>,
+    ) -> Result<(), W::Error> {
         f.write_str("ReuChunk:")?;
         self.address.fmt(f)?;
         Ok(())
     }
-}       
+}
 
 fn mark_occupied(index: usize) {
     let byte_index = index / 8;
@@ -45,9 +48,7 @@ fn mark_free(index: usize) {
 fn is_free(index: usize) -> bool {
     let byte_index = index / 8;
     let bit_index = index % 8;
-    unsafe {
-        (*BOM.add(byte_index) & (1 << bit_index)) == 0
-    }
+    unsafe { (*BOM.add(byte_index) & (1 << bit_index)) == 0 }
 }
 
 fn count_blocks(size: u32) -> usize {
