@@ -14,6 +14,7 @@ pub trait RawAddress {
 }
 
 impl<T> RawAddress for T {
+    /// convert a pointer to usize for REU functions
     fn as_address(&self) -> usize {
         let t_ptr = self as *const T;
         t_ptr as usize
@@ -65,7 +66,9 @@ bitflags! {
 
 const_assert!(size_of::<RamExpanstionUnit>() == 11);
 
+/// Commodore REU implementation
 impl RamExpanstionUnit {
+    /// Prepare address range for next REU operation
     pub fn set_range(&self, c64_start: usize, reu_start: u32, length: u16) {
         unsafe {
             self.address_control.write(Control::NONE.bits());
@@ -77,6 +80,7 @@ impl RamExpanstionUnit {
         }
     }
 
+    /// Pull memory from REU into RAM
     pub fn pull(&self) {
         unsafe {
             self.command.write(
@@ -88,6 +92,7 @@ impl RamExpanstionUnit {
         }
     }
 
+    /// Push memory from RAM to REU
     pub fn push(&self) {
         unsafe {
             self.command.write(
@@ -99,6 +104,7 @@ impl RamExpanstionUnit {
         }
     }
 
+    /// Swap RAM and REU range
     pub fn swap(&self) {
         unsafe {
             self.command.write(
@@ -107,6 +113,7 @@ impl RamExpanstionUnit {
         }
     }
 
+    /// Fill RAM with a value using REU DMA
     pub fn fill(&self, c64_start: usize, length: u16, value: u8) {
         unsafe {
             self.set_range(value.as_address(), 0, 1);

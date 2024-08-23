@@ -1,5 +1,5 @@
 use crate::ram_expansion_unit;
-use crate::reu_allocator::{ReuChunk, WAllocator};
+use crate::reu_allocator::ReuChunk;
 use core::cell::UnsafeCell;
 use core::mem;
 use core::ops::{Index, IndexMut};
@@ -11,17 +11,18 @@ extern "C" {
 
 pub struct REUArray<T> {
     cache: UnsafeCell<*mut T>, // Pointer to the heap-allocated cache wrapped in UnsafeCell
-    element_count: u32,        // Total number of elements in the remote data
+    capacity: u32,             // Total number of elements in the remote data
     window_start_index: UnsafeCell<u32>, // The starting index of the current window in the remote data
     iter_index: UnsafeCell<u32>,         // UnsafeCell to allow interior mutability
     window_size: u32,
     dirty: UnsafeCell<bool>, // Changed from bool to UnsafeCell<bool>
     reu_chunk: ReuChunk,
     element_size: usize,
+    element_count: u32,
 }
 
 impl<T> REUArray<T> {
-    pub fn new(element_count: u32, window_size: u32) -> Self {
+    pub fn with_capacity(capacity: u32, window_size: u32) -> Self {
         let element_size = mem::size_of::<T>();
         let cache_size = window_size as usize * element_size;
 
@@ -30,19 +31,26 @@ impl<T> REUArray<T> {
             if cache_ptr.is_null() {
                 panic!("out of memory");
             }
-            let reu_ptr = ram_expansion_unit::reu().alloc(element_count * element_size as u32);
+            let reu_ptr = ram_expansion_unit::reu().alloc(capacity * element_size as u32);
 
             REUArray {
                 cache: UnsafeCell::new(cache_ptr),
-                element_count,
+                capacity,
                 window_start_index: UnsafeCell::new(0), // start with the beginning of the remote data
                 iter_index: UnsafeCell::new(0),
                 window_size,
                 dirty: UnsafeCell::new(false), // Initialize with UnsafeCell<bool>
                 reu_chunk: reu_ptr,
                 element_size,
+                element_count: 0,
             }
         }
+    }
+
+    pub fn push(&mut self, element: T) {
+        let i = self.element_count;
+        self[i] = element;
+        self.element_count += 1;
     }
 
     fn ensure_in_cache(&self, index: u32) {
@@ -121,7 +129,6 @@ impl<'a, T> Drop for REUArray<T> {
     fn drop(&mut self) {
         unsafe {
             free(*self.cache.get() as *mut u8);
-            ram_expansion_unit::reu().dealloc(&self.reu_chunk);
         }
     }
 }

@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use crate::ram_expansion_unit;
 use crate::ram_expansion_unit::RamExpanstionUnit;
 
 const MEMORY_POOL_START: u32 = 0x012000;
@@ -12,21 +13,33 @@ const BITMAP_REU_ADDRESS: u32 = 0x010000;
 
 static mut BOM: *mut u8 = 0xc000 as *mut u8;
 
-//#[derive(Clone, Copy)]
+/// A chunk of REU memory with 24-bit addressing and length
+///
+/// Allocate it using ram_expansion_unit::reu()::alloc(size)
 pub struct ReuChunk {
     pub address: u32,
     pub len: u32,
 }
 
 impl ReuChunk {
+    /// Push C64 RAM contents into REU memory
     pub fn push(&self, reu: &RamExpanstionUnit, c64_start: usize) {
         reu.set_range(c64_start, self.address, self.len as u16);
         reu.push();
     }
 
+    /// Pull data from REU memory into C64 RAM
     pub fn pull(&self, reu: &RamExpanstionUnit, c64_start: usize) {
         reu.set_range(c64_start, self.address, self.len as u16);
         reu.pull();
+    }
+}
+
+impl Drop for ReuChunk {
+    fn drop(&mut self) {
+        unsafe {
+            ram_expansion_unit::reu().dealloc(&self);
+        }
     }
 }
 
@@ -67,13 +80,9 @@ fn count_blocks(size: u32) -> usize {
     ((size + BLOCK_SIZE as u32 - 1) / BLOCK_SIZE as u32) as usize
 }
 
-pub trait WAllocator {
-    unsafe fn alloc(&self, size: u32) -> ReuChunk;
-    unsafe fn dealloc(&self, ptr: &ReuChunk);
-}
-
-impl WAllocator for RamExpanstionUnit {
-    unsafe fn alloc(&self, size: u32) -> ReuChunk {
+impl RamExpanstionUnit {
+    /// Allocate a chunk of REU memory with given size
+    pub unsafe fn alloc(&self, size: u32) -> ReuChunk {
         if size == 0 {
             panic!("reu 0 alloc");
         }
@@ -112,7 +121,7 @@ impl WAllocator for RamExpanstionUnit {
         panic!("out of reu memory");
     }
 
-    // Deallocation function
+    /// Deallocation of REU chunk
     unsafe fn dealloc(&self, ptr: &ReuChunk) {
         let offset = ((ptr.address - MEMORY_POOL_START) / BLOCK_SIZE as u32) as usize;
         let blocks_needed = count_blocks(ptr.len);

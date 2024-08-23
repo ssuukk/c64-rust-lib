@@ -1,7 +1,7 @@
 use core::ptr;
 use reu::ram_expansion_unit;
 use reu::ram_expansion_unit::RawAddress;
-use reu::reu_allocator::{ReuChunk, WAllocator};
+use reu::reu_allocator::ReuChunk;
 use reu::REUArray;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
@@ -15,9 +15,9 @@ pub fn alloc_test() {
     unsafe {
         let reu = ram_expansion_unit::reu();
         let chunk = reu.alloc(1000);
+        let chunk2 = reu.alloc(10000);
         chunk.push(reu, 1024);
-        println!("got reu chunk: {:?}!", chunk);
-        ram_expansion_unit::reu().dealloc(&chunk);
+        println!("got reu chunk: {:?}, {:?}!", chunk, chunk2);
     }
 }
 
@@ -55,16 +55,16 @@ pub fn test_memory() {
 
 pub fn test_reu_slice() {
     // Allocate 100,000 GameUnit elements plus a cache that can hold 10 elements at a time
-    let mut array = REUArray::<GameUnit>::new(100, 10);
+    let mut array = REUArray::<GameUnit>::with_capacity(100, 10);
 
     for i in 0..100 {
-        array[i] = GameUnit {
+        array.push(GameUnit {
             number: i as u8,
             speed: 1,
             health: 2,
             x: 3,
             y: 4,
-        };
+        });
     }
 
     array[50].speed = 0xa;
