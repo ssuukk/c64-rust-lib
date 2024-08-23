@@ -12,10 +12,22 @@ const BITMAP_REU_ADDRESS: u32 = 0x010000;
 
 static mut BOM: *mut u8 = 0xc000 as *mut u8;
 
-#[derive(Clone, Copy)]
+//#[derive(Clone, Copy)]
 pub struct ReuChunk {
     pub address: u32,
     pub len: u32,
+}
+
+impl ReuChunk {
+    pub fn push(&self, reu: &RamExpanstionUnit, c64_start: usize) {
+        reu.set_range(c64_start, self.address, self.len as u16);
+        reu.push();
+    }
+
+    pub fn pull(&self, reu: &RamExpanstionUnit, c64_start: usize) {
+        reu.set_range(c64_start, self.address, self.len as u16);
+        reu.pull();
+    }
 }
 
 impl ufmt::uDebug for ReuChunk {
@@ -57,7 +69,7 @@ fn count_blocks(size: u32) -> usize {
 
 pub trait WAllocator {
     unsafe fn alloc(&self, size: u32) -> ReuChunk;
-    unsafe fn dealloc(&self, ptr: ReuChunk);
+    unsafe fn dealloc(&self, ptr: &ReuChunk);
 }
 
 impl WAllocator for RamExpanstionUnit {
@@ -101,11 +113,7 @@ impl WAllocator for RamExpanstionUnit {
     }
 
     // Deallocation function
-    unsafe fn dealloc(&self, ptr: ReuChunk) {
-        if ptr.address == 0 {
-            return;
-        }
-
+    unsafe fn dealloc(&self, ptr: &ReuChunk) {
         let offset = ((ptr.address - MEMORY_POOL_START) / BLOCK_SIZE as u32) as usize;
         let blocks_needed = count_blocks(ptr.len);
 

@@ -16,7 +16,7 @@ pub struct REUArray<T> {
     iter_index: UnsafeCell<u32>,         // UnsafeCell to allow interior mutability
     window_size: u32,
     dirty: UnsafeCell<bool>, // Changed from bool to UnsafeCell<bool>
-    reu_address: ReuChunk,
+    reu_chunk: ReuChunk,
     element_size: usize,
 }
 
@@ -39,7 +39,7 @@ impl<T> REUArray<T> {
                 iter_index: UnsafeCell::new(0),
                 window_size,
                 dirty: UnsafeCell::new(false), // Initialize with UnsafeCell<bool>
-                reu_address: reu_ptr,
+                reu_chunk: reu_ptr,
                 element_size,
             }
         }
@@ -89,8 +89,7 @@ impl<T> REUArray<T> {
             let byte_count = self.element_size as u32 * self.window_size;
             ram_expansion_unit::reu().set_range(
                 *self.cache.get() as usize,
-                self.reu_address.address
-                    + *self.window_start_index.get() * self.element_size as u32,
+                self.reu_chunk.address + *self.window_start_index.get() * self.element_size as u32,
                 byte_count as u16,
             );
         }
@@ -122,7 +121,7 @@ impl<'a, T> Drop for REUArray<T> {
     fn drop(&mut self) {
         unsafe {
             free(*self.cache.get() as *mut u8);
-            ram_expansion_unit::reu().dealloc(self.reu_address);
+            ram_expansion_unit::reu().dealloc(&self.reu_chunk);
         }
     }
 }
@@ -164,7 +163,7 @@ impl<T> ufmt::uDebug for REUArray<T> {
         f.write_str("\nl:")?;
         cache_ptr.fmt(f)?;
         f.write_str("  r:")?;
-        self.reu_address.fmt(f)?;
+        self.reu_chunk.fmt(f)?;
         f.write_str("\nwindow=")?;
         unsafe {
             let ws = *self.window_start_index.get();

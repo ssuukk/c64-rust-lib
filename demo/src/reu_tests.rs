@@ -13,9 +13,11 @@ pub fn reu_test() {
 
 pub fn alloc_test() {
     unsafe {
-        let chunk = ram_expansion_unit::reu().alloc(0x2000);
+        let reu = ram_expansion_unit::reu();
+        let chunk = reu.alloc(1000);
+        chunk.push(reu, 1024);
         println!("got reu chunk: {:?}!", chunk);
-        ram_expansion_unit::reu().dealloc(chunk);
+        ram_expansion_unit::reu().dealloc(&chunk);
     }
 }
 
