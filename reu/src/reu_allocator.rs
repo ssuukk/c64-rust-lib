@@ -16,21 +16,22 @@ static mut BOM: *mut u8 = 0xc000 as *mut u8;
 /// A chunk of REU memory with 24-bit addressing and length
 ///
 /// Allocate it using ram_expansion_unit::reu()::alloc(size)
+/// use push and pull to move memory blocks between RAM and REU
 pub struct ReuChunk {
     pub address: u32,
-    pub len: u32,
+    len: u32,
 }
 
 impl ReuChunk {
     /// Push C64 RAM contents into REU memory
     pub fn push(&self, reu: &RamExpanstionUnit, c64_start: usize) {
-        reu.set_range(c64_start, self.address, self.len as u16);
+        reu.set_range(c64_start, self.address, self.len as usize);
         reu.push();
     }
 
     /// Pull data from REU memory into C64 RAM
     pub fn pull(&self, reu: &RamExpanstionUnit, c64_start: usize) {
-        reu.set_range(c64_start, self.address, self.len as u16);
+        reu.set_range(c64_start, self.address, self.len as usize);
         reu.pull();
     }
 }
@@ -48,8 +49,10 @@ impl ufmt::uDebug for ReuChunk {
         &self,
         f: &mut ufmt::Formatter<'_, W>,
     ) -> Result<(), W::Error> {
-        f.write_str("ReuChunk:")?;
         self.address.fmt(f)?;
+        f.write_char('(')?;
+        self.len.fmt(f)?;
+        f.write_char(')')?;
         Ok(())
     }
 }

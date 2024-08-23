@@ -37,12 +37,14 @@ bitflags! {
 }
 
 impl U64TurboRegs {
+    /// Set clock speed of the Ultimate 64
     pub fn set_speed(&self, speed: u8) {
         unsafe {
             self.turbo_control.write(speed);
         }
     }
 
+    /// Enable or disable faster clock speeds
     pub fn set_enable(&self, value: u8) {
         unsafe {
             self.turbo_enable.write(value);

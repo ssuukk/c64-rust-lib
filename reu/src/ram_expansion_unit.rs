@@ -5,6 +5,7 @@ use volatile_register::{RO, RW};
 
 pub const REU: *const RamExpanstionUnit = (0xDF00) as _;
 
+/// REU base address
 pub fn reu() -> &'static RamExpanstionUnit {
     unsafe { &*REU }
 }
@@ -69,14 +70,14 @@ const_assert!(size_of::<RamExpanstionUnit>() == 11);
 /// Commodore REU implementation
 impl RamExpanstionUnit {
     /// Prepare address range for next REU operation
-    pub fn set_range(&self, c64_start: usize, reu_start: u32, length: u16) {
+    pub fn set_range(&self, c64_start: usize, reu_start: u32, length: usize) {
         unsafe {
             self.address_control.write(Control::NONE.bits());
             self.c64_start.write(c64_start as u16);
             self.reu_start_l.write((reu_start & 0xFF) as u8); // LSB
             self.reu_start_m.write(((reu_start >> 8) & 0xFF) as u8); // MSB
             self.reu_start_h.write(((reu_start >> 16) & 0xFF) as u8); // MOST SB
-            self.length.write(length);
+            self.length.write(length as u16);
         }
     }
 
@@ -114,7 +115,7 @@ impl RamExpanstionUnit {
     }
 
     /// Fill RAM with a value using REU DMA
-    pub fn fill(&self, c64_start: usize, length: u16, value: u8) {
+    pub fn fill(&self, c64_start: usize, length: usize, value: u8) {
         unsafe {
             self.set_range(value.as_address(), 0, 1);
             self.command.write(

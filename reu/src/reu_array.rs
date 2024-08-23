@@ -9,11 +9,15 @@ extern "C" {
     fn free(ptr: *mut u8);
 }
 
+/// An array of T stored wholly in REU memory, swapped into RAM
+/// as required.
+/// 
+/// To construct use `with_capacity`
 pub struct REUArray<T> {
     cache: UnsafeCell<*mut T>, // Pointer to the heap-allocated cache wrapped in UnsafeCell
     capacity: u32,             // Total number of elements in the remote data
     window_start_index: UnsafeCell<u32>, // The starting index of the current window in the remote data
-    window_size: u32,
+    window_size: usize,
     dirty: UnsafeCell<bool>, // Changed from bool to UnsafeCell<bool>
     reu_chunk: ReuChunk,
     element_size: usize,
@@ -21,9 +25,14 @@ pub struct REUArray<T> {
 }
 
 impl<T> REUArray<T> {
-    pub fn with_capacity(capacity: u32, window_size: u32) -> Self {
+    /// Main `REUArray` constructor.
+    /// 
+    /// `capacity` - maximum capacity of the array as u32
+    /// 
+    /// `window_size` - how many elements are kept in RAM
+    pub fn with_capacity(capacity: u32, window_size: usize) -> Self {
         let element_size = mem::size_of::<T>();
-        let cache_size = window_size as usize * element_size;
+        let cache_size = window_size * element_size;
 
         unsafe {
             let cache_ptr = malloc(cache_size) as *mut T;
@@ -45,6 +54,7 @@ impl<T> REUArray<T> {
         }
     }
 
+    /// Add new element to `REUArray`
     pub fn push(&mut self, element: T) {
         let i = self.element_count;
         if i < self.capacity {
@@ -53,10 +63,18 @@ impl<T> REUArray<T> {
         }
     }
 
+    /// Obtain mutable iterator for `REUArray`
+    pub fn iter_mut(&mut self) -> REUArrayIterMut<T> {
+        REUArrayIterMut {
+            reu_array: self,
+            index: 0,
+        }
+    }
+
     fn ensure_in_cache(&self, index: u32) {
         let window_start_index = unsafe { *self.window_start_index.get() };
 
-        if index < window_start_index || index >= window_start_index + self.window_size {
+        if index < window_start_index || index >= window_start_index + self.window_size as u32 {
             unsafe {
                 if *self.dirty.get() {
                     self.prepare_slice();
@@ -90,19 +108,12 @@ impl<T> REUArray<T> {
 
     fn prepare_slice(&self) {
         unsafe {
-            let byte_count = self.element_size as u32 * self.window_size;
+            let byte_count = self.element_size * self.window_size;
             ram_expansion_unit::reu().set_range(
                 *self.cache.get() as usize,
                 self.reu_chunk.address + *self.window_start_index.get() * self.element_size as u32,
-                byte_count as u16,
+                byte_count,
             );
-        }
-    }
-
-    pub fn iter_mut(&mut self) -> REUArrayIterMut<T> {
-        REUArrayIterMut {
-            reu_array: self,
-            index: 0,
         }
     }
 }
@@ -134,6 +145,7 @@ impl<'a, T> Iterator for REUArrayIterMut<'a, T> {
         }
     }
 }
+
 impl<'a, T> Drop for REUArray<T> {
     fn drop(&mut self) {
         unsafe {
@@ -155,10 +167,8 @@ impl<T> IndexMut<u32> for REUArray<T> {
     fn index_mut(&mut self, index: u32) -> &mut Self::Output {
         #[cfg(debug_assertions)]
         self.check_bounds(index);
-        unsafe {
-            *self.dirty.get() = true;
-            self.return_cached(index)
-        }
+        unsafe { *self.dirty.get() = true; }
+        self.return_cached(index)
     }
 }
 
