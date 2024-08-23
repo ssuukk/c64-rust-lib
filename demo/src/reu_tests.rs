@@ -69,8 +69,8 @@ pub fn test_reu_slice() {
 
     array[50].speed = 0xa;
     array[50].health = 0xb;
-    array[50].x = 0x11;
-    array[50].x = 0x22;
+    array[50].x = 69;
+    array[50].y = 11;
 
     // find all ead units
     // let dead_units = array.into_iter().filter(|unit| unit.x == 66);
@@ -82,6 +82,6 @@ pub fn test_reu_slice() {
     for i in 0..100 {
         let test = &array[i];
         println!("numer:{} x,y=({},{})", test.number, test.x, test.y);
-        println!("{:?}", array);
+        //println!("{:?}", array);
     }
 }

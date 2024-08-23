@@ -49,8 +49,10 @@ impl<T> REUArray<T> {
 
     pub fn push(&mut self, element: T) {
         let i = self.element_count;
-        self[i] = element;
-        self.element_count += 1;
+        if i < self.capacity {
+            self[i] = element;
+            self.element_count += 1;
+        }
     }
 
     fn ensure_in_cache(&self, index: u32) {
