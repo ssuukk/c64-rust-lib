@@ -3,15 +3,20 @@ extern crate alloc;
 use crate::ram_expansion_unit;
 use crate::ram_expansion_unit::RamExpanstionUnit;
 
-const MEMORY_POOL_START: u32 = 0x012000;
-const REU_MEMORY_END: u32 = 0x1000000;
-const MEMORY_SIZE: u32 = REU_MEMORY_END - MEMORY_POOL_START; // 16 MB
-const BLOCK_SIZE: usize = 256; // 256 bytes per block
-const BLOCK_COUNT: usize = (MEMORY_SIZE / BLOCK_SIZE as u32) as usize;
-const BITMAP_ADDRESS: usize = 0x4000;
-const BITMAP_REU_ADDRESS: u32 = 0x010000;
+const REU_POOL_START: u32 = 0x012000;
+const REU_POOL_END: u32 = 0x1000000;
+const AVAILABLE_REU: u32 = REU_POOL_END - REU_POOL_START; // 16 MB
+const ALLOCATION_UNIT: usize = 256; // minimal allocation unit = 256 bytes
+const ALLOCATION_UNIT_COUNT: usize = (AVAILABLE_REU / ALLOCATION_UNIT as u32) as usize;
+const BOM_RAM_ADDRESS: usize = 0x4000;
+const BOM_REU_ADDRESS: u32 = 0x010000;
+const BOM_SIZE: usize = ALLOCATION_UNIT_COUNT/8;
 
-static mut BOM: *mut u8 = 0xc000 as *mut u8;
+static mut BOM: *mut Bom = BOM_RAM_ADDRESS as *mut Bom;
+
+pub struct Bom {
+    bom: [u8; BOM_SIZE],
+}
 
 /// A chunk of REU memory with 24-bit addressing and length
 ///
@@ -57,30 +62,28 @@ impl ufmt::uDebug for ReuChunk {
     }
 }
 
-fn mark_occupied(index: usize) {
-    let byte_index = index / 8;
-    let bit_index = index % 8;
-    unsafe {
-        *BOM.add(byte_index) |= 1 << bit_index;
+impl Bom {
+    fn mark_occupied(&mut self, index: usize) {
+        let byte_index = index / 8;
+        let bit_index = index % 8;
+        self.bom[byte_index] |= 1 << bit_index;
+    }
+
+    fn mark_free(&mut self, index: usize) {
+        let byte_index = index / 8;
+        let bit_index = index % 8;
+        self.bom[byte_index] &= !(1 << bit_index);
+    }
+
+    fn is_free(&self, index: usize) -> bool {
+        let byte_index = index / 8;
+        let bit_index = index % 8;
+        (self.bom[byte_index] & (1 << bit_index)) == 0
     }
 }
 
-fn mark_free(index: usize) {
-    let byte_index = index / 8;
-    let bit_index = index % 8;
-    unsafe {
-        *BOM.add(byte_index) &= !(1 << bit_index);
-    }
-}
-
-fn is_free(index: usize) -> bool {
-    let byte_index = index / 8;
-    let bit_index = index % 8;
-    unsafe { (*BOM.add(byte_index) & (1 << bit_index)) == 0 }
-}
-
-fn count_blocks(size: u32) -> usize {
-    ((size + BLOCK_SIZE as u32 - 1) / BLOCK_SIZE as u32) as usize
+fn as_blocks(size: u32) -> usize {
+    ((size + ALLOCATION_UNIT as u32 - 1) / ALLOCATION_UNIT as u32) as usize
 }
 
 impl RamExpanstionUnit {
@@ -91,15 +94,15 @@ impl RamExpanstionUnit {
         }
 
         // swap in BAM, it has to be swapped out before return
-        self.set_range(BITMAP_ADDRESS, BITMAP_REU_ADDRESS, 8192);
+        self.set_range(BOM_RAM_ADDRESS, BOM_REU_ADDRESS, BOM_SIZE);
         self.swap();
 
-        let blocks_needed = count_blocks(size);
+        let blocks_needed = as_blocks(size);
         let mut free_blocks = 0;
         let mut start_block = 0;
 
-        for i in 0..(BLOCK_COUNT) {
-            if is_free(i) {
+        for i in 0..(ALLOCATION_UNIT_COUNT) {
+            if (*BOM).is_free(i) {
                 if free_blocks == 0 {
                     start_block = i;
                 }
@@ -107,11 +110,11 @@ impl RamExpanstionUnit {
 
                 if free_blocks == blocks_needed {
                     for j in start_block..start_block + blocks_needed {
-                        mark_occupied(j);
+                        (*BOM).mark_occupied(j);
                     }
                     self.swap();
                     return ReuChunk {
-                        address: MEMORY_POOL_START + ((start_block * BLOCK_SIZE) as u32),
+                        address: REU_POOL_START + ((start_block * ALLOCATION_UNIT) as u32),
                         len: size,
                     };
                 }
@@ -126,11 +129,11 @@ impl RamExpanstionUnit {
 
     /// Deallocation of REU chunk
     unsafe fn dealloc(&self, ptr: &ReuChunk) {
-        let offset = ((ptr.address - MEMORY_POOL_START) / BLOCK_SIZE as u32) as usize;
-        let blocks_needed = count_blocks(ptr.len);
+        let offset = ((ptr.address - REU_POOL_START) / ALLOCATION_UNIT as u32) as usize;
+        let blocks_needed = as_blocks(ptr.len);
 
         for i in offset..offset + blocks_needed {
-            mark_free(i);
+            (*BOM).mark_free(i);
         }
     }
 }
