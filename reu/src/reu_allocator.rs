@@ -3,6 +3,9 @@ extern crate alloc;
 use crate::ram_expansion_unit;
 use crate::ram_expansion_unit::RamExpanstionUnit;
 
+use ufmt_stdio::println; // stdio dla środowisk, które nie mają std
+
+
 const REU_POOL_START: u32 = 0x012000;
 const REU_POOL_END: u32 = 0x1000000;
 const AVAILABLE_REU: u32 = REU_POOL_END - REU_POOL_START; // 16 MB
@@ -87,6 +90,9 @@ fn as_blocks(size: u32) -> usize {
 }
 
 impl RamExpanstionUnit {
+    pub fn prepare_bom(&self) {
+        self.fill_reu(BOM_REU_ADDRESS, BOM_SIZE, 0);
+    }
     /// Allocate a chunk of REU memory with given size
     pub unsafe fn alloc(&self, size: u32) -> ReuChunk {
         if size == 0 {

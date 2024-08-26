@@ -2,6 +2,7 @@ use bitflags::bitflags;
 use core::mem::size_of;
 use static_assertions::const_assert;
 use volatile_register::{RO, RW};
+use ufmt_stdio::println; // stdio dla środowisk, które nie mają std
 
 pub const REU: *const RamExpanstionUnit = (0xDF00) as _;
 
@@ -114,9 +115,20 @@ impl RamExpanstionUnit {
         }
     }
 
+    pub fn fill_reu(&self, reu_start: u32, length: usize, value: u8) {
+        unsafe {
+            self.set_range(value.as_address(), reu_start, length);
+            self.address_control.write(Control::FIX_C64.bits());
+            self.command.write(
+                Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits(),
+            )
+        }
+    }
+
     /// Fill RAM with a value using REU DMA
     pub fn fill(&self, c64_start: usize, length: usize, value: u8) {
         unsafe {
+            // value gets optimized out by Rust, so it is not available...
             self.set_range(value.as_address(), 0, 1);
             self.command.write(
                 Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits(),

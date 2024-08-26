@@ -5,7 +5,7 @@ use reu::REUArray;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
 
 pub fn reu_test() {
-    ram_expansion_unit::reu().fill(1024, 80, 65);
+    ram_expansion_unit::reu().fill(1024, 1000, 66);
     // reu::reu().set_range(0x400, 0xaabbcc, 500);
     // reu::reu().pull();
 }
@@ -13,6 +13,7 @@ pub fn reu_test() {
 pub fn alloc_test() {
     unsafe {
         let reu = ram_expansion_unit::reu();
+        reu.prepare_bom();
         let chunk = reu.alloc(1000);
         let chunk2 = reu.alloc(10000);
         chunk.push(reu, 1024);
