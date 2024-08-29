@@ -1,5 +1,6 @@
 use bitflags::bitflags;
 use core::mem::size_of;
+use core::arch::asm;
 use static_assertions::const_assert;
 use volatile_register::{RO, RW};
 use ufmt_stdio::println; // stdio dla środowisk, które nie mają std
@@ -128,9 +129,12 @@ impl RamExpanstionUnit {
     /// Fill RAM with a value using REU DMA
     pub fn fill(&self, c64_start: usize, length: usize, value: u8) {
         unsafe {
+            // asm! {
+            //     "lda {value}",
+            // }
             // value gets optimized out by Rust, so it is not available...
             self.set_range(value.as_address(), 0, 1);
-            self.command.write(
+            self.command.write( 
                 Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits(),
             );
             self.set_range(c64_start, 0, length);

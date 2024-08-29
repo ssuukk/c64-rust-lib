@@ -11,6 +11,12 @@ ufmt-stdio = "0.4.0" # https://docs.rs/ufmt-stdio/0.4.0/ufmt_stdio/
 static_assertions = "1.1"
 volatile-register = "0.2"
 ufmt = "0.2.0"
+mos-test = "0.0.1"
+#defmt-test = "0.3.2"
 
 [lib]
 path = "src/lib.rs"
+
+[[test]]
+name = "test" # tests/test.rs
+harness = false

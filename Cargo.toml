@@ -20,9 +20,11 @@ debug = 2
 codegen-units = 1
 
 [profile.release]
-opt-level = 3
+opt-level = "s"
 lto = true
-debug = 2
+strip = true
+panic = "abort"
+debug = 0
 
 [patch.crates-io]
 ufmt = {git="https://github.com/mrk-its/ufmt", branch="ptr_width_16_fix"}
@@ -40,6 +42,7 @@ static_assertions = "1.1"
 bitflags = "2.6.0"
 volatile-register = "0.2"
 volatile = "0.6.1"
+#rust = { features = ["asm_experimental_arch"] }
 
 [[bin]]
 name = "demo"
