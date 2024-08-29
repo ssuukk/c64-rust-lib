@@ -1,3 +1,14 @@
+#![no_std] // nie ładuj biblioteki std
+#![no_main] // No main function is required
+
+use core::panic::PanicInfo;
+
+// Provide a panic handler function
+#[panic_handler]
+fn panic(_info: &PanicInfo) -> ! {
+    loop {}
+}
+
 // https://github.com/mrk-its/mos-test
 // https://crates.io/crates/defmt-test
 // state shared across unit tests
@@ -20,13 +31,13 @@ mod tests {
     // though like with `test`, state access is optional.
     #[before_each]
     fn before_each(state: &mut super::MyState) {
-        defmt::println!("State flag before is {}", state.flag);
+        //mos_test::println!("State flag before is {}", state.flag);
     }
 
     // This function is called after each test
     #[after_each]
     fn after_each(state: &mut super::MyState) {
-        defmt::println!("State flag after is {}", state.flag);
+        //defmt::println!("State flag after is {}", state.flag);
     }
 
     // this unit test doesn't access the state
