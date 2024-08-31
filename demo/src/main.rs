@@ -3,7 +3,7 @@
 // opcjonalnie dodać --release
 //
 // kopiowanie wyniku:
-// docker cp determined_williamson:/workspaces/c64-rust-lib/target/mos-c64-none/release/rust-mos-hello-world D:/temp/rust
+// docker cp upbeat_hawking:/workspaces/c64-rust-lib/target/mos-c64-none/release/demo D:/temp/demo
 // otwarcie terminala kontenera: ctrl+shift+`
 // https://github.com/mlund/mos-hardware
 
@@ -50,8 +50,8 @@ fn _main(_argc: isize, _argv: *const *const u8) -> isize {
     //plotek_tests::test_hires();
     // reu_tests::test_reu_slice();
     // reu_tests::test_memory();
-    //reu_tests::alloc_test();
-    reu_tests::reu_test();
+    reu_tests::alloc_test();
+    //reu_tests::reu_test();
 
     0
 }

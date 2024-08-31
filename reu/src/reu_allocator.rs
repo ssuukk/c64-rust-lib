@@ -1,21 +1,25 @@
 extern crate alloc;
 
 use crate::ram_expansion_unit;
-use crate::ram_expansion_unit::RamExpanstionUnit;
+use crate::ram_expansion_unit::{ RamExpanstionUnit, Command };
+use mos_hardware::{c64, cbm_kernal, vic2};
 
 use ufmt_stdio::println; // stdio dla środowisk, które nie mają std
 
+
+use mos_hardware::c64::{CpuPortFlags, CPU_PORT};
 
 const REU_POOL_START: u32 = 0x012000;
 const REU_POOL_END: u32 = 0x1000000;
 const AVAILABLE_REU: u32 = REU_POOL_END - REU_POOL_START; // 16 MB
 const ALLOCATION_UNIT: usize = 256; // minimal allocation unit = 256 bytes
 const ALLOCATION_UNIT_COUNT: usize = (AVAILABLE_REU / ALLOCATION_UNIT as u32) as usize;
-const BOM_RAM_ADDRESS: usize = 0x4000;
+const BOM_RAM_ADDRESS: usize = 0xE000;
 const BOM_REU_ADDRESS: u32 = 0x010000;
 const BOM_SIZE: usize = ALLOCATION_UNIT_COUNT/8;
 
 static mut BOM: *mut Bom = BOM_RAM_ADDRESS as *mut Bom;
+
 
 pub struct Bom {
     bom: [u8; BOM_SIZE],
@@ -92,6 +96,14 @@ fn as_blocks(size: u32) -> usize {
 impl RamExpanstionUnit {
     pub fn prepare_bom(&self) {
         self.fill_reu(BOM_REU_ADDRESS, BOM_SIZE, 0);
+        // TODO fill interrupt vectors
+        // FFFA-B = NMI
+        // FFFC-D = RESET
+        // FFFE-F = IRQ
+
+        unsafe {
+            crate::fake_irq_function();
+        }
     }
     /// Allocate a chunk of REU memory with given size
     pub unsafe fn alloc(&self, size: u32) -> ReuChunk {
@@ -99,15 +111,13 @@ impl RamExpanstionUnit {
             panic!("reu 0 alloc");
         }
 
-        // swap in BAM, it has to be swapped out before return
-        self.set_range(BOM_RAM_ADDRESS, BOM_REU_ADDRESS, BOM_SIZE);
-        self.swap();
+        self.swap_bom_in();
 
         let blocks_needed = as_blocks(size);
         let mut free_blocks = 0;
         let mut start_block = 0;
 
-        for i in 0..(ALLOCATION_UNIT_COUNT) {
+        'outer:for i in 0..(ALLOCATION_UNIT_COUNT) {
             if (*BOM).is_free(i) {
                 if free_blocks == 0 {
                     start_block = i;
@@ -118,19 +128,24 @@ impl RamExpanstionUnit {
                     for j in start_block..start_block + blocks_needed {
                         (*BOM).mark_occupied(j);
                     }
-                    self.swap();
-                    return ReuChunk {
-                        address: REU_POOL_START + ((start_block * ALLOCATION_UNIT) as u32),
-                        len: size,
-                    };
+                    break 'outer;
                 }
             } else {
                 free_blocks = 0;
             }
         }
 
-        self.swap();
-        panic!("out of reu memory");
+        self.swap_bom_out();
+
+        if free_blocks != blocks_needed {
+            panic!("out of reu memory");
+        }
+        else {
+            return ReuChunk {
+                address: REU_POOL_START + ((start_block * ALLOCATION_UNIT) as u32),
+                len: size,
+            }
+        }
     }
 
     /// Deallocation of REU chunk
@@ -138,8 +153,40 @@ impl RamExpanstionUnit {
         let offset = ((ptr.address - REU_POOL_START) / ALLOCATION_UNIT as u32) as usize;
         let blocks_needed = as_blocks(ptr.len);
 
+        self.swap_bom_in();
         for i in offset..offset + blocks_needed {
             (*BOM).mark_free(i);
         }
+        self.swap_bom_out();
+    }
+
+    fn swap_bom_in(&self) {        
+        // step aside, Kernal! TODO: need to disable interrupts!
+        unsafe {
+            c64::vic2().border_color.write(vic2::WHITE);
+            (*CPU_PORT).write(CpuPortFlags::RAM_IO_RAM);
+            c64::vic2().border_color.write(vic2::RED);
+        
+            // retrieve BOM from REU
+            c64::vic2().border_color.write(vic2::GREEN);
+            self.swap();
+
+            self.command.write(
+                Command::EXECUTE.bits() | Command::SWAP.bits() | Command::NO_FF00_DECODE.bits(),
+            );
+
+
+            c64::vic2().border_color.write(vic2::BLACK);
+        }
+    }
+
+    fn swap_bom_out(&self) {
+        // write modified BOM back to REU
+        self.swap();
+        // restore KERNAL
+        unsafe {
+            (*CPU_PORT).write(CpuPortFlags::RAM_IO_KERNAL);
+            c64::vic2().border_color.write(vic2::ORANGE);
+        }        
     }
 }

@@ -44,6 +44,10 @@ volatile-register = "0.2"
 volatile = "0.6.1"
 #rust = { features = ["asm_experimental_arch"] }
 
+[build-dependencies]
+cc = "1.1.15"
+#bindgen = { version = "0.70.1", optional = true }
+
 [[bin]]
 name = "demo"
 path = "./demo/src/main.rs"

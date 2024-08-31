@@ -11,6 +11,8 @@ ufmt-stdio = "0.4.0" # https://docs.rs/ufmt-stdio/0.4.0/ufmt_stdio/
 static_assertions = "1.1"
 volatile-register = "0.2"
 ufmt = "0.2.0"
+mos-hardware = "0.4.0" # https://docs.rs/mos-hardware/latest/mos_hardware/
+
 
 [dev-dependencies]
 mos-test = "0.0.1"
