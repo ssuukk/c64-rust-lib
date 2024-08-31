@@ -3,7 +3,7 @@ extern crate alloc;
 use crate::ram_expansion_unit;
 use crate::ram_expansion_unit::{ RamExpanstionUnit, Command };
 use mos_hardware::{c64, cbm_kernal, vic2};
-
+use crate::vectors::INTERRUPT_VECTORS;
 use ufmt_stdio::println; // stdio dla środowisk, które nie mają std
 
 
@@ -96,13 +96,10 @@ fn as_blocks(size: u32) -> usize {
 impl RamExpanstionUnit {
     pub fn prepare_bom(&self) {
         self.fill_reu(BOM_REU_ADDRESS, BOM_SIZE, 0);
-        // TODO fill interrupt vectors
-        // FFFA-B = NMI
-        // FFFC-D = RESET
-        // FFFE-F = IRQ
-
         unsafe {
-            crate::fake_irq_function();
+            (*INTERRUPT_VECTORS).nmi.write(crate::__fake_interrupt as u16);
+            (*INTERRUPT_VECTORS).reset.write(crate::__fake_interrupt as u16);
+            (*INTERRUPT_VECTORS).irq.write(crate::__fake_interrupt as u16);
         }
     }
     /// Allocate a chunk of REU memory with given size
@@ -161,22 +158,11 @@ impl RamExpanstionUnit {
     }
 
     fn swap_bom_in(&self) {        
-        // step aside, Kernal! TODO: need to disable interrupts!
+        self.set_range(BOM_RAM_ADDRESS, BOM_REU_ADDRESS, BOM_SIZE);
+        self.swap();
+        // step aside, Kernal!
         unsafe {
-            c64::vic2().border_color.write(vic2::WHITE);
             (*CPU_PORT).write(CpuPortFlags::RAM_IO_RAM);
-            c64::vic2().border_color.write(vic2::RED);
-        
-            // retrieve BOM from REU
-            c64::vic2().border_color.write(vic2::GREEN);
-            self.swap();
-
-            self.command.write(
-                Command::EXECUTE.bits() | Command::SWAP.bits() | Command::NO_FF00_DECODE.bits(),
-            );
-
-
-            c64::vic2().border_color.write(vic2::BLACK);
         }
     }
 
