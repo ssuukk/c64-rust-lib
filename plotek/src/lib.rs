@@ -1,9 +1,9 @@
-#![no_std] // nie ładuj biblioteki std
-#![feature(panic_info_message)]
+#![no_std] // Don't use the standard library
 
 pub mod cia2;
 
 use cia2::{set_vic_bank, VicBankSelect};
+use core::ptr::{read_volatile, write_volatile};
 use mos_hardware::c64::vic2;
 use mos_hardware::vic2::{ControlYFlags, ScreenBank};
 
@@ -11,11 +11,20 @@ pub trait CharMatrix {
     fn clear(&self, value: u8);
 }
 
-pub struct C64TextScreen {}
+pub struct C64TextScreen;
+
+impl C64TextScreen {
+    unsafe fn buffer_ptr(&self) -> *mut u8 {
+        self as *const _ as *mut u8
+    }
+}
 
 impl CharMatrix for C64TextScreen {
     fn clear(&self, value: u8) {
-        clear(self as *const _ as *mut u8, 1000, value);
+        unsafe {
+            let buffer = self.buffer_ptr();
+            clear(buffer, 1000, value);
+        }
     }
 }
 
@@ -25,27 +34,34 @@ pub trait PixelMatrix {
     fn clear(&self, value: u8);
 }
 
-pub struct C64HiresScreen {}
+pub struct C64HiresScreen;
+
+impl C64HiresScreen {
+    unsafe fn buffer_ptr(&self) -> *mut u8 {
+        self as *const _ as *mut u8
+    }
+}
 
 impl PixelMatrix for C64HiresScreen {
-    fn plot(&self, x: u16, y: u8) {
-        let col = (x >> 3) << 3;
-        let row = (y >> 3) as u16;
-        let subrow = (y % 8) as u16;
-        let byte_offset = col + 10 * (row << 5) + subrow;
-        // Calculate the bit position within the byte
-        let bit_position = 7 - (x % 8);
-
-        // Set the pixel by setting the corresponding bit
-        let start_addr = self as *const _ as *mut u8;
+    fn clear(&self, value: u8) {
         unsafe {
-            let byte_ptr = start_addr.add(byte_offset as usize);
-            *byte_ptr |= 1 << bit_position;
+            let buffer = self.buffer_ptr();
+            clear(buffer, 8000, value);
         }
     }
 
-    fn clear(&self, value: u8) {
-        clear(self as *const _ as *mut u8, 8000, value);
+    fn plot(&self, x: u16, y: u8) {
+        unsafe {
+            let buffer = self.buffer_ptr();
+            let col = (x >> 3) << 3;
+            let row = (y >> 3) as u16;
+            let subrow = (y % 8) as u16;
+            let byte_offset = col + 10 * (row << 5) + subrow;
+            let bit_position = 7 - (x % 8);
+            let byte_ptr = buffer.add(byte_offset as usize);
+            let current_value = read_volatile(byte_ptr);
+            write_volatile(byte_ptr, current_value | (1 << bit_position));
+        }
     }
 
     fn line(&self, start: (u16, u8), end: (u16, u8)) {
@@ -83,7 +99,7 @@ impl PixelMatrix for C64HiresScreen {
 fn clear(start_addr: *mut u8, size: usize, value: u8) {
     unsafe {
         for i in 0..size {
-            *start_addr.add(i) = value;
+            write_volatile(start_addr.add(i), value);
         }
     }
 }

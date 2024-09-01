@@ -1,18 +1,17 @@
 use core::ptr;
+use mos_hardware::c64::sid;
 use reu::ram_expansion_unit;
 use reu::REUArray;
 use ufmt_stdio::*; // stdio dla środowisk, które nie mają std
-use mos_hardware::c64::sid;
 
 pub fn alloc_test() {
     sid().start_random_generator();
     let chunk_count = sid().rand8(20);
 
     let reu = ram_expansion_unit::reu();
-    reu.init_allocator();
 
     for _ in 0..chunk_count {
-        let size = (sid().rand16(1000)*16+1) as u32;
+        let size = (sid().rand16(1000) * 16 + 1) as u32;
         let chunk = reu.alloc(size);
         println!("got reu chunk: {:?}!", chunk);
     }

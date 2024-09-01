@@ -1,8 +1,8 @@
 use bitflags::bitflags;
 use core::mem::size_of;
 use static_assertions::const_assert;
-use volatile_register::{RO, RW};
-use ufmt_stdio::println; // stdio dla środowisk, które nie mają std
+use ufmt_stdio::println;
+use volatile_register::{RO, RW}; // stdio dla środowisk, które nie mają std
 
 pub const REU: *const RamExpanstionUnit = (0xDF00) as _;
 static mut FILL_VALUE: u8 = 0xff;
@@ -123,7 +123,7 @@ impl RamExpanstionUnit {
             FILL_VALUE = value;
             let value_address = &FILL_VALUE as *const u8 as usize;
             self.set_range(value_address, 0, 1);
-            self.command.write( 
+            self.command.write(
                 Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits(),
             );
         }

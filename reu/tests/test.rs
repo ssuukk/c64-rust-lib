@@ -21,9 +21,7 @@ mod tests {
     #[init]
     fn init() -> super::MyState {
         // state initial value
-        super::MyState {
-            flag: true,
-        }
+        super::MyState { flag: true }
     }
 
     // This function is called before each test case.

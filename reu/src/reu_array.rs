@@ -11,7 +11,7 @@ extern "C" {
 
 /// An array of T stored wholly in REU memory, swapped into RAM
 /// as required.
-/// 
+///
 /// To construct use `with_capacity`
 pub struct REUArray<T> {
     cache: UnsafeCell<*mut T>, // Pointer to the heap-allocated cache wrapped in UnsafeCell
@@ -26,9 +26,9 @@ pub struct REUArray<T> {
 
 impl<T> REUArray<T> {
     /// Main `REUArray` constructor.
-    /// 
+    ///
     /// `capacity` - maximum capacity of the array as u32
-    /// 
+    ///
     /// `window_size` - how many elements are kept in RAM
     pub fn with_capacity(capacity: u32, window_size: usize) -> Self {
         let element_size = mem::size_of::<T>();
@@ -167,7 +167,9 @@ impl<T> IndexMut<u32> for REUArray<T> {
     fn index_mut(&mut self, index: u32) -> &mut Self::Output {
         #[cfg(debug_assertions)]
         self.check_bounds(index);
-        unsafe { *self.dirty.get() = true; }
+        unsafe {
+            *self.dirty.get() = true;
+        }
         self.return_cached(index)
     }
 }

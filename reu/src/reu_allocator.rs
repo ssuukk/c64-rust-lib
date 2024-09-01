@@ -1,11 +1,10 @@
 extern crate alloc;
 
 use crate::ram_expansion_unit;
-use crate::ram_expansion_unit::{ RamExpanstionUnit, Command };
-use mos_hardware::{c64, cbm_kernal, vic2};
+use crate::ram_expansion_unit::{Command, RamExpanstionUnit};
 use crate::vectors::INTERRUPT_VECTORS;
+use mos_hardware::{c64, cbm_kernal, vic2};
 use ufmt_stdio::println; // stdio dla środowisk, które nie mają std
-
 
 use mos_hardware::c64::{CpuPortFlags, CPU_PORT};
 
@@ -16,7 +15,7 @@ const ALLOCATION_UNIT: usize = 256; // minimal allocation unit = 256 bytes
 const ALLOCATION_UNIT_COUNT: usize = (AVAILABLE_REU / ALLOCATION_UNIT as u32) as usize;
 const BOM_RAM_ADDRESS: usize = 0xE000;
 const BOM_REU_ADDRESS: u32 = 0x010000;
-const BOM_SIZE: usize = ALLOCATION_UNIT_COUNT/8;
+const BOM_SIZE: usize = ALLOCATION_UNIT_COUNT / 8;
 
 static mut BOM: *mut Bom = BOM_RAM_ADDRESS as *mut Bom;
 
@@ -109,7 +108,7 @@ impl RamExpanstionUnit {
         let mut free_blocks = 0;
         let mut start_block = 0;
 
-        'outer:for i in 0..(ALLOCATION_UNIT_COUNT) {
+        'outer: for i in 0..(ALLOCATION_UNIT_COUNT) {
             unsafe {
                 if (*BOM).is_free(i) {
                     if free_blocks == 0 {
@@ -134,12 +133,11 @@ impl RamExpanstionUnit {
 
         if free_blocks != blocks_needed {
             panic!("out of reu memory");
-        }
-        else {
+        } else {
             return ReuChunk {
                 address: REU_POOL_START + ((start_block * ALLOCATION_UNIT) as u32),
                 len: size,
-            }
+            };
         }
     }
 
@@ -172,6 +170,6 @@ impl RamExpanstionUnit {
         unsafe {
             (*CPU_PORT).write(CpuPortFlags::RAM_IO_KERNAL);
             crate::__enable_mi();
-        }        
+        }
     }
 }

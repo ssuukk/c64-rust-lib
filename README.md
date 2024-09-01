@@ -14,7 +14,7 @@ reu.set_range(1024, 0x050000, 1000);  // prepare REU working range
 reu.pull(); // get data from REU into RAM
 reu.push(); // put data from RAM to REU
 reu.swap(); // swap RAM and REU
-reu.fill(1024,1000,32); // clear screen using REU DMA
+reu.fill(1024, 1000, 32); // clear screen using REU DMA
 reu.fill_reu(0x030000, 10000, 0); // fill some REU address with 0s
 ```
 
