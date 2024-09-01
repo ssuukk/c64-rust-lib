@@ -10,6 +10,6 @@ pub use ram_expansion_unit::RamExpanstionUnit;
 pub use reu_array::REUArray;
 
 extern "C" {
-    // defined in c to allow assembly and interrupt attribute
-    fn __fake_interrupt();
+    fn __enable_mi();
+    fn __disable_mi();
 }

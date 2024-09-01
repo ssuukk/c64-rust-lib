@@ -1,6 +1,11 @@
-.global __fake_interrupt
+.global __enable_mi
+.global __disable_mi
 
 .text
-__fake_interrupt:
-    inc 53280
-    rti
+__enable_mi:
+    cli
+    rts
+
+__disable_mi:
+    sei
+    rts

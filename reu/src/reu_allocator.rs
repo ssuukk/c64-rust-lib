@@ -20,7 +20,6 @@ const BOM_SIZE: usize = ALLOCATION_UNIT_COUNT/8;
 
 static mut BOM: *mut Bom = BOM_RAM_ADDRESS as *mut Bom;
 
-
 pub struct Bom {
     bom: [u8; BOM_SIZE],
 }
@@ -94,16 +93,12 @@ fn as_blocks(size: u32) -> usize {
 }
 
 impl RamExpanstionUnit {
-    pub fn prepare_bom(&self) {
+    pub fn init_allocator(&self) {
         self.fill_reu(BOM_REU_ADDRESS, BOM_SIZE, 0);
-        unsafe {
-            (*INTERRUPT_VECTORS).nmi.write(crate::__fake_interrupt as u16);
-            (*INTERRUPT_VECTORS).reset.write(crate::__fake_interrupt as u16);
-            (*INTERRUPT_VECTORS).irq.write(crate::__fake_interrupt as u16);
-        }
     }
+
     /// Allocate a chunk of REU memory with given size
-    pub unsafe fn alloc(&self, size: u32) -> ReuChunk {
+    pub fn alloc(&self, size: u32) -> ReuChunk {
         if size == 0 {
             panic!("reu 0 alloc");
         }
@@ -115,20 +110,23 @@ impl RamExpanstionUnit {
         let mut start_block = 0;
 
         'outer:for i in 0..(ALLOCATION_UNIT_COUNT) {
-            if (*BOM).is_free(i) {
-                if free_blocks == 0 {
-                    start_block = i;
-                }
-                free_blocks += 1;
-
-                if free_blocks == blocks_needed {
-                    for j in start_block..start_block + blocks_needed {
-                        (*BOM).mark_occupied(j);
+            unsafe {
+                if (*BOM).is_free(i) {
+                    if free_blocks == 0 {
+                        start_block = i;
                     }
-                    break 'outer;
+                    free_blocks += 1;
+
+                    if free_blocks == blocks_needed {
+                        for j in start_block..start_block + blocks_needed {
+                            (*BOM).mark_occupied(j);
+                        }
+                        break 'outer;
+                    }
+                } else {
+                    //c64::vic2().border_color.write(free_blocks as u8);
+                    free_blocks = 0;
                 }
-            } else {
-                free_blocks = 0;
             }
         }
 
@@ -157,13 +155,14 @@ impl RamExpanstionUnit {
         self.swap_bom_out();
     }
 
-    fn swap_bom_in(&self) {        
-        self.set_range(BOM_RAM_ADDRESS, BOM_REU_ADDRESS, BOM_SIZE);
-        self.swap();
+    fn swap_bom_in(&self) {
         // step aside, Kernal!
         unsafe {
+            crate::__disable_mi();
             (*CPU_PORT).write(CpuPortFlags::RAM_IO_RAM);
         }
+        self.set_range(BOM_RAM_ADDRESS, BOM_REU_ADDRESS, BOM_SIZE);
+        self.swap();
     }
 
     fn swap_bom_out(&self) {
@@ -172,7 +171,7 @@ impl RamExpanstionUnit {
         // restore KERNAL
         unsafe {
             (*CPU_PORT).write(CpuPortFlags::RAM_IO_KERNAL);
-            c64::vic2().border_color.write(vic2::ORANGE);
+            crate::__enable_mi();
         }        
     }
 }

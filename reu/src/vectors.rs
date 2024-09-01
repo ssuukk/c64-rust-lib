@@ -1,4 +1,4 @@
-use volatile_register::{RO, RW};
+use volatile_register::RW;
 
 #[repr(C, packed)]
 pub struct InterruptVectors {

@@ -1,27 +1,15 @@
 use bitflags::bitflags;
 use core::mem::size_of;
-use core::arch::asm;
 use static_assertions::const_assert;
 use volatile_register::{RO, RW};
 use ufmt_stdio::println; // stdio dla środowisk, które nie mają std
 
 pub const REU: *const RamExpanstionUnit = (0xDF00) as _;
+static mut FILL_VALUE: u8 = 0xff;
 
 /// REU base address
 pub fn reu() -> &'static RamExpanstionUnit {
     unsafe { &*REU }
-}
-
-pub trait RawAddress {
-    fn as_address(&self) -> usize;
-}
-
-impl<T> RawAddress for T {
-    /// convert a pointer to usize for REU functions
-    fn as_address(&self) -> usize {
-        let t_ptr = self as *const T;
-        t_ptr as usize
-    }
 }
 
 // https://www.codebase64.org/doku.php?id=base:reu_registers
@@ -118,7 +106,10 @@ impl RamExpanstionUnit {
 
     pub fn fill_reu(&self, reu_start: u32, length: usize, value: u8) {
         unsafe {
-            self.set_range(value.as_address(), reu_start, length);
+            FILL_VALUE = value;
+            // let value_address = value as *const u8 as usize; jeśli value jako &u8
+            let value_address = &FILL_VALUE as *const u8 as usize;
+            self.set_range(value_address, reu_start, length);
             self.address_control.write(Control::FIX_C64.bits());
             self.command.write(
                 Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits(),
@@ -129,15 +120,15 @@ impl RamExpanstionUnit {
     /// Fill RAM with a value using REU DMA
     pub fn fill(&self, c64_start: usize, length: usize, value: u8) {
         unsafe {
-            // asm! {
-            //     "lda {value}",
-            // }
-            // value gets optimized out by Rust, so it is not available...
-            self.set_range(value.as_address(), 0, 1);
+            FILL_VALUE = value;
+            let value_address = &FILL_VALUE as *const u8 as usize;
+            self.set_range(value_address, 0, 1);
             self.command.write( 
                 Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits(),
             );
-            self.set_range(c64_start, 0, length);
+        }
+        self.set_range(c64_start, 0, length);
+        unsafe {
             self.address_control.write(Control::FIX_REU.bits());
             self.command.write(
                 Command::EXECUTE.bits() | Command::FROM_REU.bits() | Command::NO_FF00_DECODE.bits(),

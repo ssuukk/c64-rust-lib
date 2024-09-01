@@ -22,6 +22,7 @@ mod reu_tests;
 mod ultimate_tests;
 
 use core::fmt::{self, Write};
+use reu::ram_expansion_unit;
 
 struct SimpleWriter;
 
@@ -47,11 +48,12 @@ fn panic(info: &PanicInfo) -> ! {
 
 #[start] // atrybut oznaczający entrypoint
 fn _main(_argc: isize, _argv: *const *const u8) -> isize {
-    //plotek_tests::test_hires();
-    // reu_tests::test_reu_slice();
-    // reu_tests::test_memory();
+    ram_expansion_unit::reu().init_allocator();
+
+    reu_tests::test_reu_array();
     reu_tests::alloc_test();
-    //reu_tests::reu_test();
+    //plotek_tests::test_hires();
+
 
     0
 }
