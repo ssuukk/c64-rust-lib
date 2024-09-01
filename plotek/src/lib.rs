@@ -7,6 +7,16 @@ use core::ptr::{read_volatile, write_volatile};
 use mos_hardware::c64::vic2;
 use mos_hardware::vic2::{ControlYFlags, ScreenBank};
 
+pub static mut CLEAR_FUNC: fn(*mut u8, usize, u8) = default_clear;
+
+fn default_clear(start_addr: *mut u8, size: usize, value: u8) {
+    unsafe {
+        for i in 0..size {
+            write_volatile(start_addr.add(i), value);
+        }
+    }
+}
+
 pub trait CharMatrix {
     fn clear(&self, value: u8);
 }
@@ -23,7 +33,7 @@ impl CharMatrix for C64TextScreen {
     fn clear(&self, value: u8) {
         unsafe {
             let buffer = self.buffer_ptr();
-            clear(buffer, 1000, value);
+            CLEAR_FUNC(buffer, 1000, value);
         }
     }
 }
@@ -46,7 +56,7 @@ impl PixelMatrix for C64HiresScreen {
     fn clear(&self, value: u8) {
         unsafe {
             let buffer = self.buffer_ptr();
-            clear(buffer, 8000, value);
+            CLEAR_FUNC(buffer, 8000, value);
         }
     }
 
@@ -92,14 +102,6 @@ impl PixelMatrix for C64HiresScreen {
                 err += dx;
                 y0 = (y0 as i16 + sy) as u8;
             }
-        }
-    }
-}
-
-fn clear(start_addr: *mut u8, size: usize, value: u8) {
-    unsafe {
-        for i in 0..size {
-            write_volatile(start_addr.add(i), value);
         }
     }
 }

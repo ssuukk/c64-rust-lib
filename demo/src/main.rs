@@ -52,6 +52,7 @@ fn _main(_argc: isize, _argv: *const *const u8) -> isize {
     // reu_tests::test_reu_array();
     // reu_tests::alloc_test();
     plotek_tests::test_hires();
-
+    //plotek_tests::raster();
+    //loop {};
     0
 }

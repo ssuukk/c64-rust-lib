@@ -77,7 +77,7 @@ pub fn test_reu_array() {
 
 Set clock speed of Ultimate 64:
 
-```
+```Rust
     ultimate_64::get().set_speed(ultimate_64::Timings::MHZ_48.bits());
     ultimate_64::get().set_enable(ultimate_64::Turbo::ENABLE.bits());
 ```
@@ -85,23 +85,28 @@ Set clock speed of Ultimate 64:
 # A Hires screen library
 
 ```Rust
-pub const HIRES: *const C64HiresScreen = (0xa000) as _;
-pub const COLORS: *const C64TextScreen = (0x8400) as _;
+pub fn test_hires() {
+    const HIRES: *const C64HiresScreen = 0x2000 as _;
+    const COLORS: *const C64TextScreen = 1024 as _;
 
-fn test_hires() {
+    let vic = c64::vic2();
+
     unsafe {
+        vic.border_color.write(COLOR_BLACK);
+
+        (*COLORS).clear(32);
+
+        plotek::show(cia2::VicBankSelect::VIC_0000, ScreenBank::AT_0400);
+
         (*HIRES).clear(0);
-        (*COLORS).clear(33);
-        //reu::reu().fill(0xa000, 8000, 0);
-        plotek::show(VicBankSelect::VIC_8000, ScreenBank::AT_0400);
 
-        for i in 0..32 {
-            (*HIRES).line((0,0),(i*10,199));
+        for i in 0..40 {
+            (*HIRES).line((0, 0), (i * 8, 199));
         }
-    
-        wait_for_return();
-
-        plotek::hide();
     }
+
+    wait_for_return();
+
+    plotek::hide();
 }
 ```
