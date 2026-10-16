@@ -8,8 +8,7 @@
 // https://github.com/mlund/mos-hardware
 
 #![no_std] // nie ładuj biblioteki std
-#![feature(start)] // używamy niestandardowego entry pointu
-#![feature(panic_info_message)]
+#![no_main]
 
 extern crate mos_alloc;
 
@@ -37,17 +36,13 @@ impl Write for SimpleWriter {
 fn panic(info: &PanicInfo) -> ! {
     let mut writer = SimpleWriter;
 
-    if let Some(message) = info.message() {
-        let _ = writeln!(writer, "?{} panic", message);
-    } else {
-        let _ = writeln!(writer, "?panic");
-    }
+        let _ = writeln!(writer, "?{} panic", info.message());
 
     loop {}
 }
 
-#[start] // atrybut oznaczający entrypoint
-fn _main(_argc: isize, _argv: *const *const u8) -> isize {
+#[unsafe(no_mangle)]
+pub extern "C" fn main() -> core::ffi::c_int {
     // ram_expansion_unit::reu().init_allocator();
     // reu_tests::test_reu_array();
     // reu_tests::alloc_test();

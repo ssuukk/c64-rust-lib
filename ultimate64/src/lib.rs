@@ -1,5 +1,4 @@
 #![no_std] // nie ładuj biblioteki std
-#![feature(panic_info_message)]
 
 use bitflags::bitflags;
 use volatile_register::RW;

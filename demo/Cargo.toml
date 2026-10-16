@@ -11,6 +11,6 @@ plotek = { path = "../plotek" }
 ultimate64 = { path = "../ultimate64" }
 
 ufmt-stdio = "0.4.0" # https://docs.rs/ufmt-stdio/0.4.0/ufmt_stdio/
-mos-hardware = "0.4.0" # https://docs.rs/mos-hardware/latest/mos_hardware/
+mos-hardware = { version = "0.4.0", default-features = false, features = ["c64", "cx16", "bindgen"] }
 mos-alloc = "0.2" # https://docs.rs/mos-alloc/0.2.0/mos_alloc/
 static_assertions = "1.1"

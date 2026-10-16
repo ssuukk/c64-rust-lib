@@ -1,5 +1,4 @@
 #![no_std] // nie ładuj biblioteki std
-#![feature(panic_info_message)]
 
 pub mod ram_expansion_unit;
 pub mod reu_allocator;
