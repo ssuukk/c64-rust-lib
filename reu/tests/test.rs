@@ -1,6 +1,8 @@
 #![no_std] // nie ładuj biblioteki std
 #![no_main] // No main function is required
 
+extern crate mos_alloc;
+
 use core::panic::PanicInfo;
 
 // Provide a panic handler function
@@ -18,6 +20,9 @@ struct MyState {
 
 #[mos_test::tests]
 mod tests {
+    use core::mem::size_of;
+    use reu::ram_expansion_unit::{Command, Control, RamExpanstionUnit, Status};
+
     #[init]
     fn init() -> super::MyState {
         // state initial value
@@ -49,5 +54,36 @@ mod tests {
     fn assert_flag(state: &mut super::MyState) {
         assert!(state.flag);
         state.flag = false;
+    }
+
+    #[test]
+    fn reu_register_block_has_expected_size() {
+        assert!(size_of::<RamExpanstionUnit>() == 11);
+    }
+
+    #[test]
+    fn reu_status_bits_match_hardware_register() {
+        assert!(Status::INTERRUPT_PENDING.bits() == 0x80);
+        assert!(Status::END_OF_BLOCK.bits() == 0x40);
+        assert!(Status::FAULT.bits() == 0x20);
+        assert!(Status::SIZE.bits() == 0x10);
+    }
+
+    #[test]
+    fn reu_command_bits_match_hardware_register() {
+        assert!(Command::EXECUTE.bits() == 0x80);
+        assert!(Command::AUTOLOAD.bits() == 0x20);
+        assert!(Command::NO_FF00_DECODE.bits() == 0x10);
+        assert!(Command::TO_REU.bits() == 0);
+        assert!(Command::FROM_REU.bits() == 1);
+        assert!(Command::SWAP.bits() == 2);
+        assert!(Command::VERIFY.bits() == 3);
+    }
+
+    #[test]
+    fn reu_address_control_bits_match_hardware_register() {
+        assert!(Control::FIX_C64.bits() == 0x80);
+        assert!(Control::FIX_REU.bits() == 0x40);
+        assert!(Control::NONE.bits() == 0);
     }
 }

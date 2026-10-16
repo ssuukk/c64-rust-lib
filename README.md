@@ -4,6 +4,8 @@ Various C64 Rust utilities that I coded while learning Rust.
 
 # REU library
 
+The default demo does not require a REU. Build the REU smoke-test image with `cargo build -p c64-rust-lib --bin demo --features reu-hardware-tests`; set the capacity passed to `init_allocator` in `demo/src/reu_tests.rs` to match the emulator's REU configuration before running it.
+
 ## Basic REU wrapper
 
 Some obvious REU operations wrapped into Rust functions:
@@ -24,7 +26,7 @@ A simple memory allocator returning 24-bit pointer that knows its block size, fo
 
 ```Rust
 let reu = ram_expansion_unit::reu();
-reu.init_allocator();  // prepare BAM in REU
+reu.init_allocator(128 * 1024);  // initialize the BAM for a 128 KiB REU
 let screen_memory = reu.alloc(1000);  // alloc 1000 bytes somewhere in REU
 screen_memory.push(1024);  // push RAM starting at 1024 into REU chunk
 ...
@@ -34,10 +36,10 @@ screen_memory.pull(1024);  // restore REU chunk into RAM starting at 1024
 
 ## Array stored in REU
 
-`u32` indexable array that is kept in REU, with all Rust goodies. The size of the array is limited only by REU size.
+Fixed-capacity array stored in REU and paged through a small RAM cache. Values must implement `Copy`; use `get` and `set` for element access, or `with_mut` for scoped mutation. `for_each_mut` visits the initialized elements without returning references into the cache.
 
 ```Rust
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct GameUnit {
     number: u8,
     speed: u8,
@@ -47,7 +49,7 @@ struct GameUnit {
 }
 
 pub fn test_reu_array() {
-    // Allocate 100,000 GameUnit elements 10 elements will be cached in RAM
+    // Cache ten elements at a time while storing up to 100,000 in REU.
     let mut array = REUArray::<GameUnit>::with_capacity(100_000, 10);
 
     for i in 0..100 {
@@ -60,16 +62,18 @@ pub fn test_reu_array() {
         });
     }
 
-    array[50].speed = 0xa;
-    array[50].health = 0xb;
-    array[50].x = 69;
-    array[50].y = 11;
+    array.with_mut(50, |unit| {
+        unit.speed = 0xa;
+        unit.health = 0xb;
+        unit.x = 69;
+        unit.y = 11;
+    });
 
-    let sixty_nine = array.iter_mut().filter(|unit| unit.x == 69);
-
-    for u in sixty_nine {
-        println!("{} Unit at x=69: ({},{})", u.number, u.x, u.y);
-    }
+    array.for_each_mut(|_, unit| {
+        if unit.x == 69 {
+            println!("{} Unit at x=69: ({},{})", unit.number, unit.x, unit.y);
+        }
+    });
 }
 ```
 

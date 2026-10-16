@@ -1,13 +1,9 @@
 use mos_hardware::cx16::COLOR_BLACK;
 use mos_hardware::vic2::ScreenBank; // albo crate::vic2:ScreenBank
 use mos_hardware::{c64, cbm_kernal};
+use core::ptr::{read_volatile, write_volatile};
 use plotek::cia2;
-use plotek::{C64HiresScreen, C64TextScreen, CharMatrix, PixelMatrix, CLEAR_FUNC};
-use reu::ram_expansion_unit;
-
-fn reu_clear(start_addr: *mut u8, size: usize, value: u8) {
-    ram_expansion_unit::reu().fill(start_addr as usize, size, value);
-}
+use plotek::{C64HiresScreen, C64TextScreen, CharMatrix, PixelMatrix};
 
 pub fn test_hires() {
     const HIRES: *const C64HiresScreen = 0x2000 as _;
@@ -16,7 +12,7 @@ pub fn test_hires() {
     let vic = c64::vic2();
 
     unsafe {
-        CLEAR_FUNC = reu_clear;
+        run_screen_tests(HIRES, COLORS);
         vic.border_color.write(COLOR_BLACK);
 
         (*COLORS).clear(32);
@@ -33,6 +29,51 @@ pub fn test_hires() {
     wait_for_return();
 
     plotek::hide();
+}
+
+unsafe fn run_screen_tests(hires: *const C64HiresScreen, colors: *const C64TextScreen) {
+    const BITMAP_START: usize = 0x2000;
+    const BITMAP_SIZE: usize = 8000;
+    const TEXT_START: usize = 0x0400;
+    const TEXT_SIZE: usize = 1000;
+
+    write_volatile((BITMAP_START + BITMAP_SIZE) as *mut u8, 0xa5);
+    (*hires).clear(0x5a);
+    assert!(read_volatile(BITMAP_START as *const u8) == 0x5a);
+    assert!(read_volatile((BITMAP_START + BITMAP_SIZE - 1) as *const u8) == 0x5a);
+    assert!(read_volatile((BITMAP_START + BITMAP_SIZE) as *const u8) == 0xa5);
+
+    write_volatile((TEXT_START + TEXT_SIZE) as *mut u8, 0xa5);
+    (*colors).clear(32);
+    assert!(read_volatile(TEXT_START as *const u8) == 32);
+    assert!(read_volatile((TEXT_START + TEXT_SIZE - 1) as *const u8) == 32);
+    assert!(read_volatile((TEXT_START + TEXT_SIZE) as *const u8) == 0xa5);
+
+    (*hires).clear(0);
+    (*hires).plot(0, 0);
+    (*hires).plot(7, 0);
+    (*hires).plot(8, 0);
+    (*hires).plot(1, 0);
+    (*hires).plot(319, 199);
+    assert!(read_volatile(BITMAP_START as *const u8) == 0xc1);
+    assert!(read_volatile((BITMAP_START + 8) as *const u8) == 0x80);
+    assert!(read_volatile((BITMAP_START + BITMAP_SIZE - 1) as *const u8) == 0x01);
+
+    (*hires).clear(0);
+    (*hires).line((2, 2), (7, 2));
+    assert!(read_volatile((BITMAP_START + 2) as *const u8) == 0x3f);
+
+    (*hires).clear(0);
+    (*hires).line((3, 3), (0, 0));
+    assert!(read_volatile(BITMAP_START as *const u8) == 0x80);
+    assert!(read_volatile((BITMAP_START + 1) as *const u8) == 0x40);
+    assert!(read_volatile((BITMAP_START + 2) as *const u8) == 0x20);
+    assert!(read_volatile((BITMAP_START + 3) as *const u8) == 0x10);
+
+    (*hires).clear(0);
+    (*hires).line((0, 7), (0, 8));
+    assert!(read_volatile((BITMAP_START + 7) as *const u8) == 0x80);
+    assert!(read_volatile((BITMAP_START + 320) as *const u8) == 0x80);
 }
 
 pub fn raster() {

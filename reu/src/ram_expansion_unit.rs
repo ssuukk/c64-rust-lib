@@ -61,6 +61,14 @@ const_assert!(size_of::<RamExpanstionUnit>() == 11);
 impl RamExpanstionUnit {
     /// Prepare address range for next REU operation
     pub fn set_range(&self, c64_start: usize, reu_start: u32, length: usize) {
+        assert!(c64_start <= u16::MAX as usize, "C64 address exceeds 16 bits");
+        assert!(reu_start <= 0x00ff_ffff, "REU address exceeds 24 bits");
+        assert!(length <= u16::MAX as usize, "REU DMA length exceeds 16 bits");
+        let transfer_length = if length == 0 { 0x1_0000 } else { length as u32 };
+        assert!(
+            reu_start + transfer_length <= 0x0100_0000,
+            "REU DMA range exceeds 16 MiB"
+        );
         unsafe {
             self.address_control.write(Control::NONE.bits());
             self.c64_start.write(c64_start as u16);
@@ -108,7 +116,7 @@ impl RamExpanstionUnit {
         unsafe {
             FILL_VALUE = value;
             // let value_address = value as *const u8 as usize; jeśli value jako &u8
-            let value_address = &FILL_VALUE as *const u8 as usize;
+            let value_address = core::ptr::addr_of!(FILL_VALUE) as usize;
             self.set_range(value_address, reu_start, length);
             self.address_control.write(Control::FIX_C64.bits());
             self.command.write(
@@ -121,7 +129,7 @@ impl RamExpanstionUnit {
     pub fn fill(&self, c64_start: usize, length: usize, value: u8) {
         unsafe {
             FILL_VALUE = value;
-            let value_address = &FILL_VALUE as *const u8 as usize;
+            let value_address = core::ptr::addr_of!(FILL_VALUE) as usize;
             self.set_range(value_address, 0, 1);
             self.command.write(
                 Command::EXECUTE.bits() | Command::TO_REU.bits() | Command::NO_FF00_DECODE.bits(),

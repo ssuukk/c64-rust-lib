@@ -1,4 +1,4 @@
 {
-  "image": "mrkits/rust-mos",
+  "image": "ghcr.io/sbechet/rust-mos:beta",
   "extensions": ["matklad.rust-analyzer", "serayuzgur.crates", "eamodio.gitlens"],
 }

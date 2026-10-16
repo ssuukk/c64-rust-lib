@@ -21,7 +21,6 @@ mod reu_tests;
 mod ultimate_tests;
 
 use core::fmt::{self, Write};
-use reu::ram_expansion_unit;
 
 struct SimpleWriter;
 
@@ -43,11 +42,14 @@ fn panic(info: &PanicInfo) -> ! {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn main() -> core::ffi::c_int {
-    // ram_expansion_unit::reu().init_allocator();
-    // reu_tests::test_reu_array();
-    // reu_tests::alloc_test();
+    #[cfg(feature = "reu-hardware-tests")]
+    {
+        reu_tests::test_reu_allocator();
+        reu_tests::test_reu_array();
+        println!("REU tests passed");
+    }
+
+    #[cfg(not(feature = "reu-hardware-tests"))]
     plotek_tests::test_hires();
-    //plotek_tests::raster();
-    //loop {};
     0
 }
