@@ -107,7 +107,10 @@ impl RamExpanstionUnit {
     pub fn swap(&self) {
         unsafe {
             self.command.write(
-                Command::EXECUTE.bits() | Command::SWAP.bits() | Command::NO_FF00_DECODE.bits(),
+                Command::EXECUTE.bits()
+                    | Command::SWAP.bits()
+                    | Command::NO_FF00_DECODE.bits()
+                    | Command::AUTOLOAD.bits(),
             );
         }
     }

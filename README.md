@@ -4,7 +4,7 @@ Various C64 Rust utilities that I coded while learning Rust.
 
 # REU library
 
-The default demo does not require a REU. Build the REU smoke-test image with `cargo build -p c64-rust-lib --bin demo --features reu-hardware-tests`; set the capacity passed to `init_allocator` in `demo/src/reu_tests.rs` to match the emulator's REU configuration before running it.
+The default demo does not require a REU. Build the REU smoke-test image with `cargo build -p c64-rust-lib --bin demo --features reu-hardware-tests`; the demo initializes an 8 MiB allocator, so configure the emulator with an 8 MiB REU before running it.
 
 ## Basic REU wrapper
 
@@ -26,7 +26,7 @@ A simple memory allocator returning 24-bit pointer that knows its block size, fo
 
 ```Rust
 let reu = ram_expansion_unit::reu();
-reu.init_allocator(128 * 1024);  // initialize the BAM for a 128 KiB REU
+    reu.init_allocator(8 * 1024 * 1024);  // initialize the BAM for an 8 MiB REU
 let screen_memory = reu.alloc(1000);  // alloc 1000 bytes somewhere in REU
 screen_memory.push(1024);  // push RAM starting at 1024 into REU chunk
 ...

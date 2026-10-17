@@ -8,7 +8,7 @@ pub fn alloc_test() {
     let chunk_count = sid().rand8(20);
 
     let reu = ram_expansion_unit::reu();
-    reu.init_allocator(128 * 1024);
+    reu.init_allocator(8 * 1024 * 1024);
 
     for _ in 0..chunk_count {
         let size = (sid().rand16(1000) * 16 + 1) as u32;
@@ -28,9 +28,16 @@ struct GameUnit {
     y: u16,
 }
 
+fn assert_guard_filled(bytes: &[u8; 256]) {
+    for index in 0..bytes.len() {
+        let value = unsafe { core::ptr::read_volatile(bytes.as_ptr().add(index)) };
+        assert!(value == 0xa5);
+    }
+}
+
 pub fn test_reu_array() {
     let reu = ram_expansion_unit::reu();
-    reu.init_allocator(128 * 1024);
+    reu.init_allocator(8 * 1024 * 1024);
 
     assert!(core::mem::size_of::<GameUnit>() * 32 == 256);
 
@@ -38,6 +45,9 @@ pub fn test_reu_array() {
     let mut array = REUArray::<GameUnit>::with_capacity(32, 10);
     let guard = reu.alloc(256);
     reu.fill_reu(guard.address(), 256, 0xa5);
+    let mut guard_data = [0; 256];
+    guard.pull(reu, guard_data.as_mut_ptr() as usize);
+    assert_guard_filled(&guard_data);
 
     for i in 0..32 {
         array.push(GameUnit {
@@ -77,7 +87,33 @@ pub fn test_reu_array() {
     assert!(array.get(25).x == 69);
     assert!(array.get(10).speed == 3);
 
-    array.for_each(|_, unit| {
+    array.for_each(|index, unit| {
+        let expected_speed = match index {
+            5 => 0xb,
+            10 => 3,
+            _ => 2,
+        };
+        let expected_health = if index == 5 { 0xb } else if index == 10 { 3 } else { 2 };
+        let expected_x = if index == 5 || index == 25 {
+            69
+        } else if index == 10 {
+            4
+        } else {
+            3
+        };
+        let expected_y = if index == 5 {
+            11
+        } else if index == 10 {
+            5
+        } else {
+            4
+        };
+
+        assert!(unit.number == index as u8);
+        assert!(unit.speed == expected_speed);
+        assert!(unit.health == expected_health);
+        assert!(unit.x == expected_x);
+        assert!(unit.y == expected_y);
         if unit.x == 69 {
             println!("{} Unit at x=69: ({},{})", unit.number, unit.x, unit.y);
         }
@@ -85,21 +121,13 @@ pub fn test_reu_array() {
 
     drop(array);
 
-    let mut restored = REUArray::<GameUnit>::with_capacity(32, 10);
-    assert!(restored.get(5).x == 69);
-    assert!(restored.get(5).speed == 0xb);
-    assert!(restored.get(10).speed == 3);
-    assert!(restored.get(25).x == 69);
-    drop(restored);
-
-    let mut guard_data = [0; 256];
     guard.pull(reu, guard_data.as_mut_ptr() as usize);
-    assert!(guard_data.iter().all(|value| *value == 0xa5));
+    assert_guard_filled(&guard_data);
 }
 
 pub fn test_reu_allocator() {
     let reu = ram_expansion_unit::reu();
-    reu.init_allocator(128 * 1024);
+    reu.init_allocator(8 * 1024 * 1024);
 
     let first = reu.alloc(1);
     let second = reu.alloc(256);

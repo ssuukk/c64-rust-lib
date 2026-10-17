@@ -4,3 +4,6 @@ target = "mos-c64-none"
 [target.mos-sim-none]
 runner = ["mos-sim", "--cycles"]
 
+
+[target.mos-c64-none]
+linker = "mos-c64-clang"

@@ -1,0 +1,6 @@
+[build]
+target = "mos-c64-none"
+
+[target.mos-sim-none]
+runner = ["mos-sim", "--cycles"]
+
