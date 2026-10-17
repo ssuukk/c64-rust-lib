@@ -119,6 +119,32 @@ pub fn test_reu_array() {
         }
     });
 
+    // Index / IndexMut coverage.
+    assert!(array[0].number == 0);
+    assert!(array[31].y == 4);
+    array[7] = GameUnit {
+        number: 7,
+        speed: 0xc,
+        health: 0xd,
+        padding: 0,
+        x: 70,
+        y: 12,
+    };
+    assert!(array.get(7).x == 70);
+    assert!(array.get(7).speed == 0xc);
+
+    // Iteration coverage.
+    let mut sum_x = 0u32;
+    let mut count = 0u32;
+    for unit in &mut array {
+        sum_x += unit.x as u32;
+        count += 1;
+    }
+    assert!(count == 32);
+    // 0..=6 + 8..=9 + 11..=31 carry x=3, 10 carries x=4, 5/25 carry x=69, 7 carries 70.
+    // sum_x = 3*28 + 4 + 2*69 + 70 = 84 + 4 + 138 + 70 = 296.
+    assert!(sum_x == 296);
+
     drop(array);
 
     guard.pull(reu, guard_data.as_mut_ptr() as usize);
