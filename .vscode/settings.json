@@ -2,22 +2,29 @@
     // Workspace pins channel = "mos-stable" via rust-toolchain.toml; default
     // target is mos-c64-none (.cargo/config.toml). rust-mos 1.99 does not
     // ship its own rust-analyzer nor a proc-macro server, so we point the
-    // editor at the host "stable" toolchain's bundled rust-analyzer, use
-    // the host stable sysroot for core/alloc resolution (so trait DefIds
-    // match rust-analyzer's internal stable core and trait lookups like
-    // IndexMut resolve correctly), and route proc-macro compilation
-    // through scripts/cargo-with-stable-rustc.sh via
-    // buildScripts.overrideCommand so the host-target proc-macro .so
-    // files are stamped with stable's rustc id.
+    // editor at the host "stable" toolchain's bundled rust-analyzer.
+    //
+    // rust-analyzer sets RUSTUP_TOOLCHAIN to stable when it spawns cargo,
+    // which breaks `cargo metadata` (stable rustc has no mos-c64-none
+    // target). Clearing RUSTUP_TOOLCHAIN via cargo.extraEnv makes the
+    // rustup shim read rust-toolchain.toml and use rust-mos. RUSTC_BOOTSTRAP
+    // enables the -Z unstable-options that rust-analyzer needs for
+    // `--print target-spec-json` on a custom target.
+    //
     "rust-analyzer.server.path": "/home/qus/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rust-analyzer",
     "rust-analyzer.updates.channel": "stable",
 
-    // Stable sysroot for trait DefId alignment. The actual `cargo build`
-    // still uses rust-mos (via rust-toolchain.toml), so this only affects
-    // rust-analyzer's HIR resolution. Disable rust-src loading because
-    // neither stable nor rust-mos ships it under that path.
+    "rust-analyzer.cargo.extraEnv": {
+        "RUSTUP_TOOLCHAIN": "",
+        "RUSTC_BOOTSTRAP": "1",
+        "RUSTUP_AUTO_INSTALL": "0"
+    },
+
+    // Sysroot = rust-mos for cargo metadata. Disable rust-src because
+    // rust-mos ships no source; the setup script symlinks the stable
+    // proc-macro server into it (rust-mos ships none).
     "rust-analyzer.cargo.target": "mos-c64-none",
-    "rust-analyzer.cargo.sysroot": "/home/qus/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+    "rust-analyzer.cargo.sysroot": "/home/qus/.local/share/rust-mos/v1.99.1-mos.1-x86_64-unknown-linux-gnu",
     "rust-analyzer.cargo.sysrootSrc": null,
 
     "rust-analyzer.cargo.allTargets": false,
@@ -25,15 +32,15 @@
     "rust-analyzer.cargo.buildScripts.invocationStrategy": "per_workspace",
     "rust-analyzer.cargo.buildScripts.rebuildOnSave": false,
     "rust-analyzer.cargo.features": "all",
-    "rust-analyzer.cargo.buildScripts.overrideCommand": [
-        "/home/qus/dev/_c64/c64-rust-lib/scripts/cargo-with-stable-rustc.sh",
-        "check",
-        "--quiet",
-        "--workspace",
-        "--message-format=json",
-        "--all-targets",
-        "--keep-going"
-    ],
+
+    // Build data: rust-analyzer's default `cargo check` goes through the
+    // rustup shim (mos-stable), producing mos-stamped proc-macro .so that
+    // the stable proc-macro server refuses ("rustc version mismatch" — a
+    // hard error, macros unusable). Instead, compile the compile-time
+    // deps with the host stable toolchain in an isolated target dir.
+    // The script exits 0 despite the expected C64 build-script
+    // failures; see scripts/ra-build-data.sh.
+    "rust-analyzer.cargo.buildScripts.overrideCommand": ["/home/qus/dev/_c64/c64-rust-lib/scripts/ra-build-data.sh"],
 
     // `checkOnSave` is a single boolean in rust-analyzer 1.99; the old
     // `.allTargets` sub-key moved to the top-level `check.*` namespace.

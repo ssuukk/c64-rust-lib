@@ -266,6 +266,9 @@ impl<T: Copy> IndexMut<u32> for REUArray<T> {
         // `&mut self`, so the window cannot shift while the borrow is live.
         self.check_bounds(index);
         self.ensure_in_cache(index, true);
+        // The returned `&mut T` may be written through; mark the window dirty
+        // so the change is flushed to REU when the window later slides.
+        self.mark_dirty();
         let cache_index = (index - self.window_start()) as usize;
         // SAFETY: cache pointer is non-null and `cache_index` is inside
         // the window. The returned `&mut T` borrows from `&mut self`.
