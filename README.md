@@ -43,7 +43,6 @@ Fixed-capacity array stored in REU and paged through a small RAM cache. Values m
 struct GameUnit {
     number: u8,
     speed: u8,
-    health: u8,
     x: u16,
     y: u16,
 }
@@ -56,7 +55,6 @@ pub fn test_reu_array() {
         array.push(GameUnit {
             number: i as u8,
             speed: 1,
-            health: 2,
             x: 3,
             y: 4,
         });
@@ -64,15 +62,10 @@ pub fn test_reu_array() {
 
     array.with_mut(50, |unit| {
         unit.speed = 0xa;
-        unit.health = 0xb;
-        unit.x = 69;
-        unit.y = 11;
     });
 
     array.for_each_mut(|_, unit| {
-        if unit.x == 69 {
-            println!("{} Unit at x=69: ({},{})", unit.number, unit.x, unit.y);
-        }
+        unit.x += 1;
     });
 }
 ```
@@ -113,4 +106,24 @@ pub fn test_hires() {
 
     plotek::hide();
 }
+```
+
+# Editor setup (VS Code + rust-analyzer)
+
+The project pins [`channel = "mos-stable"`](rust-toolchain.toml); rust-mos 1.99 does **not** ship its own `rust-analyzer` or `rust-analyzer-proc-macro-srv` inside its sysroot. The official stable component owns both binaries, so the editor needs them too. Run once after any rust-mos reinstall:
+
+```sh
+./scripts/setup-rust-analyzer-sysroot.sh
+```
+
+The script creates a single `rust-analyzer-proc-macro-srv` symlink inside the rust-mos sysroot that points at the stable toolchain's proc-macro server. Nothing else is touched. The matching `.vscode/settings.json` then tells the rust-analyzer extension to:
+
+- load the editor-side rust-analyzer from `stable` (which is where its bundle is installed),
+- analyse the workspace against the `mos-c64-none` target declared in `.cargo/config.toml`,
+- leave proc-macro expansion enabled (the symlink above is what makes that work).
+
+If you need to undo the sysroot patch:
+
+```sh
+./scripts/setup-rust-analyzer-sysroot.sh --unlink
 ```

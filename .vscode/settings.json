@@ -1,4 +1,44 @@
 {
-    "rust-analyzer.checkOnSave.allTargets": false,
+    // Workspace pins channel = "mos-stable" via rust-toolchain.toml; default
+    // target is mos-c64-none (.cargo/config.toml). rust-mos 1.99 does not
+    // ship its own rust-analyzer nor a proc-macro server, so we point the
+    // editor at the host "stable" toolchain's bundled rust-analyzer, use
+    // the host stable sysroot for core/alloc resolution (so trait DefIds
+    // match rust-analyzer's internal stable core and trait lookups like
+    // IndexMut resolve correctly), and route proc-macro compilation
+    // through scripts/cargo-with-stable-rustc.sh via
+    // buildScripts.overrideCommand so the host-target proc-macro .so
+    // files are stamped with stable's rustc id.
+    "rust-analyzer.server.path": "/home/qus/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rust-analyzer",
+    "rust-analyzer.updates.channel": "stable",
+
+    // Stable sysroot for trait DefId alignment. The actual `cargo build`
+    // still uses rust-mos (via rust-toolchain.toml), so this only affects
+    // rust-analyzer's HIR resolution. Disable rust-src loading because
+    // neither stable nor rust-mos ships it under that path.
+    "rust-analyzer.cargo.target": "mos-c64-none",
+    "rust-analyzer.cargo.sysroot": "/home/qus/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+    "rust-analyzer.cargo.sysrootSrc": null,
+
+    "rust-analyzer.cargo.allTargets": false,
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "rust-analyzer.cargo.buildScripts.invocationStrategy": "per_workspace",
+    "rust-analyzer.cargo.buildScripts.rebuildOnSave": false,
+    "rust-analyzer.cargo.features": "all",
+    "rust-analyzer.cargo.buildScripts.overrideCommand": [
+        "/home/qus/dev/_c64/c64-rust-lib/scripts/cargo-with-stable-rustc.sh",
+        "check",
+        "--quiet",
+        "--workspace",
+        "--message-format=json",
+        "--all-targets",
+        "--keep-going"
+    ],
+
+    // `checkOnSave` is a single boolean in rust-analyzer 1.99; the old
+    // `.allTargets` sub-key moved to the top-level `check.*` namespace.
+    "rust-analyzer.checkOnSave": false,
+    "rust-analyzer.check.allTargets": false,
+
     "dev.containers.dockerPath": "podman"
 }

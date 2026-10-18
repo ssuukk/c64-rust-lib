@@ -63,3 +63,34 @@ Remote monitor accepts one query per TCP connection. One query per `ncat`:
 - **Remote monitor is one-shot per connection** — issuing a second `m` over the same TCP connection hangs. Use fresh `ncat` invocations.
 - **The `vice_network_send: Przerwany potok (broken pipe)` in the log is the sound buffer overrun**, not a C64 program error. Ignore.
 - **`Sound: Buffer full during suspend` in the log is the VICE sound subsystem**, not our code. Ignore.
+
+# Editor setup (VS Code + rust-analyzer)
+
+rust-mos 1.99 sysroot does NOT ship its own `rust-analyzer` or `rust-analyzer-proc-macro-srv`. Without help, the editor aborts expansion with `cannot find proc-macro server in sysroot /home/qus/.local/share/rust-mos/v1.99.1-mos.1-...`, which cascades into false positives like `cannot index into a value of type REUArray<T>` (`Index<u32>` already exists in `reu/src/reu_array.rs`). One-time setup, re-run after any rust-mos reinstall:
+
+```sh
+rustup component add rust-analyzer --toolchain stable-x86_64-unknown-linux-gnu
+./scripts/setup-rust-analyzer-sysroot.sh    # symlink rust-analyzer-proc-macro-srv into the rust-mos sysroot
+```
+
+To undo the sysroot patch:
+
+```sh
+./scripts/setup-rust-analyzer-sysroot.sh --unlink
+```
+
+`.vscode/settings.json` points rust-analyzer at the stable binary, sets `rust-analyzer.cargo.target = mos-c64-none`, leaves `rust-analyzer.rustc.source = null`, and disables on-save checks (`rust-analyzer.checkOnSave = false`). The project toolchain pin stays `mos-stable`; cargo builds are unaffected.
+
+Gotchas fixed by recent schema adjustments:
+
+- **`rust-analyzer.checkOnSave` is a plain boolean.** The old `rust-analyzer.checkOnSave.allTargets` is invalid; use the top-level `rust-analyzer.check.allTargets` instead.
+- **`rust-analyzer.rustc.source`** is the camelCase form in current builds; setting the lowercase `rustcSource` is rejected.
+
+Known second-order noise NOT fixed by the symlink: rust-analyzer pre-builds host-target `target/debug/deps/lib{ufmt_macros,thiserror_impl,defmt_macros,mos_test_macros}-*.so`, while the active rustc is mos-stable. The hashes differ; logs show `proc macro server error: rustc version mismatch. expected rustc 1.99.1 (58cf8f9... ), found rustc 1.99.1 (6f73c1e3b... ) (mos)`. These are WARNs, not fatal. `cargo clean` or `cargo clean -p ufmt-macros -p thiserror-impl -p defmt-macros -p mos-test-macros` suppresses them after switching rustc versions.
+- **Verify:** After running the script once, restart VS Code (or run `> Rust Analyzer: Restart Server`) and confirm the diagnostics on `demo/src/reu_tests.rs` no longer show the two original errors. The remaining rust-analyzer log noise (`can't load standard library`, host-target proc-macro `.so` version-mismatch WARNs) is residual and unrelated.
+
+Background noise and the configurations that suppress it (NOT recommended unless the noise blocks your work):
+
+- **`ERROR can't load standard library, sysroot_path=.../rust-mos/...`** — rust-mos ships `core`/`alloc` as prebuilt rlibs without `rust-src`. rust-analyzer asks for the source so go-to-def jumps into `core`. Mitigated by `rust-analyzer.cargo.sysrootSrc = null` (already set); click-throughs to `core::` items land on the rlib symbol instead. To silence the log entirely, set `rust-analyzer.cargo.noDeps = true` (loses go-to-def into dependencies).
+- **`WARN proc-macro ... rustc version mismatch`** — rust-analyzer's build-script loader rebuilds host-target proc-macro `.so` files on every cold start; they no longer match the mos-stable rustc hash, but they aren't actually used for `mos-c64-none` analysis. The loader logs a WARN per `.so`. To silence, set `rust-analyzer.procMacro.enable = false` (loses derive expansion in editor diagnostics).
+
